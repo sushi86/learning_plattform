@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import type { Editor } from "tldraw";
+import type Konva from "konva";
 import { WhiteboardCanvas } from "@/components/whiteboard";
 import type { BackgroundType } from "@/components/whiteboard/types";
 import { exportWorkspaceToPdf } from "@/lib/pdf-export";
@@ -35,7 +35,7 @@ export default function WorkspaceContent({
   const [showMembers, setShowMembers] = useState(false);
 
   // PDF export state
-  const editorRef = useRef<Editor | null>(null);
+  const stageRef = useRef<Konva.Stage | null>(null);
   const [pdfExporting, setPdfExporting] = useState(false);
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -155,9 +155,8 @@ export default function WorkspaceContent({
     [workspaceId, fetchPages],
   );
 
-  // Handle editor mount — store ref for PDF export
-  const handleEditorMount = useCallback((editor: Editor) => {
-    editorRef.current = editor;
+  const handleStageMount = useCallback((stage: Konva.Stage) => {
+    stageRef.current = stage;
   }, []);
 
   // Handle PDF export
@@ -173,15 +172,10 @@ export default function WorkspaceContent({
         pages,
         workspaceName: workspace?.name || "Workspace",
         activePageId,
-        getEditorSvg: async () => {
-          const editor = editorRef.current;
-          if (!editor) return null;
-
-          const shapeIds = editor.getCurrentPageShapeIds();
-          if (shapeIds.size === 0) return null;
-
-          const result = await editor.getSvgString([...shapeIds]);
-          return result ?? null;
+        getStageImage: async () => {
+          const stage = stageRef.current;
+          if (!stage) return null;
+          return stage.toDataURL({ pixelRatio: 3 });
         },
         onProgress: (current, total) => {
           setPdfProgress({ current, total });
@@ -321,7 +315,7 @@ export default function WorkspaceContent({
               key={activePage.id}
               pageId={activePage.id}
               backgroundType={activePage.backgroundType}
-              onMount={handleEditorMount}
+              onMount={handleStageMount}
               onConnectionStatusChange={setConnectionStatus}
               className="h-full w-full"
             />
