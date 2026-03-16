@@ -23,7 +23,7 @@ export const COORD_GRID_SPACING_PX = 10 * MM_TO_PX;
 export type BackgroundType = "BLANK" | "GRID" | "LINED" | "COORDINATE";
 
 /** Available tool types */
-export type ToolType = "select" | "draw" | "eraser" | "text" | "line";
+export type ToolType = "select" | "draw" | "eraser" | "text" | "line" | "rect-select" | "lasso-select";
 
 /** Color palette */
 export const COLORS = [
