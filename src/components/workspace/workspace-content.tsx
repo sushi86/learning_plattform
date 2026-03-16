@@ -9,7 +9,6 @@ import type { BackgroundType } from "@/components/whiteboard/types";
 import { A4_WIDTH_PX, A4_HEIGHT_PX } from "@/components/whiteboard/types";
 import { exportWorkspaceToPdf } from "@/lib/pdf-export";
 import type { ConnectionStatus } from "@/lib/useYjsSync";
-import PageSidebar from "./page-sidebar";
 import NewPageDialog from "./new-page-dialog";
 import PdfExportDialog from "./pdf-export-dialog";
 import ConnectionStatusIndicator from "./connection-status";
@@ -41,59 +40,11 @@ export default function WorkspaceContent({
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
   const [pdfError, setPdfError] = useState<string | null>(null);
 
-  // Sidebar state
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [thumbnails, setThumbnails] = useState<Map<string, string>>(new Map());
+  // Set first page as active for connection status tracking
+
 
   const isTeacher = session?.user?.role === "TEACHER";
   const activePage = pages.find((p) => p.id === activePageId) || null;
-
-  // Generate thumbnail for active page periodically
-  // Renders only the A4 area (0,0)→(794,1123) regardless of current zoom/pan
-  useEffect(() => {
-    if (!activePageId || !stageRef.current) return;
-    const generateThumbnail = () => {
-      const stage = stageRef.current;
-      if (!stage) return;
-      try {
-        // Save current transform
-        const prevScale = { x: stage.scaleX(), y: stage.scaleY() };
-        const prevPos = { x: stage.x(), y: stage.y() };
-
-        // Reset to identity transform so we capture the raw A4 area
-        stage.scaleX(1);
-        stage.scaleY(1);
-        stage.x(0);
-        stage.y(0);
-
-        const dataUrl = stage.toDataURL({
-          x: 0,
-          y: 0,
-          width: A4_WIDTH_PX,
-          height: A4_HEIGHT_PX,
-          pixelRatio: 0.15,
-        });
-
-        // Restore transform
-        stage.scaleX(prevScale.x);
-        stage.scaleY(prevScale.y);
-        stage.x(prevPos.x);
-        stage.y(prevPos.y);
-
-        setThumbnails((prev) => {
-          const next = new Map(prev);
-          next.set(activePageId, dataUrl);
-          return next;
-        });
-      } catch {
-        // Thumbnail generation failed silently
-      }
-    };
-    // Generate immediately and then every 3 seconds
-    generateThumbnail();
-    const interval = setInterval(generateThumbnail, 3000);
-    return () => clearInterval(interval);
-  }, [activePageId]);
 
   // Fetch workspace info
   const fetchWorkspace = useCallback(async () => {
@@ -170,41 +121,6 @@ export default function WorkspaceContent({
       }
     },
     [activePageId],
-  );
-
-  // Handle page reorder
-  const handleReorder = useCallback(
-    async (updates: { id: string; sortOrder: number }[]) => {
-      // Optimistic update: reorder locally first
-      setPages((prev) => {
-        const updated = prev.map((page) => {
-          const update = updates.find((u) => u.id === page.id);
-          return update ? { ...page, sortOrder: update.sortOrder } : page;
-        });
-        return updated.sort((a, b) => a.sortOrder - b.sortOrder);
-      });
-
-      // Persist to server
-      try {
-        const res = await fetch(
-          `/api/workspaces/${workspaceId}/pages/reorder`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ pages: updates }),
-          },
-        );
-
-        if (res.ok) {
-          const serverPages: PageItem[] = await res.json();
-          setPages(serverPages);
-        }
-      } catch {
-        // Revert on failure by re-fetching
-        fetchPages();
-      }
-    },
-    [workspaceId, fetchPages],
   );
 
   const handleStageMount = useCallback((stage: Konva.Stage) => {
@@ -367,51 +283,71 @@ export default function WorkspaceContent({
         </div>
       </header>
 
-      {/* Main content area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <PageSidebar
-          pages={pages}
-          activePageId={activePageId}
-          onSelectPage={setActivePageId}
-          onAddPage={() => setShowNewPageDialog(true)}
-          onDeletePage={handleDeletePage}
-          onReorder={handleReorder}
-          isTeacher={isTeacher}
-          thumbnails={thumbnails}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
-        />
-
-        {/* Canvas area */}
-        <main className="flex-1">
-          {activePage ? (
-            <WhiteboardCanvas
-              key={activePage.id}
-              pageId={activePage.id}
-              backgroundType={activePage.backgroundType}
-              onMount={handleStageMount}
-              onConnectionStatusChange={setConnectionStatus}
-              aiEnabled={session?.user?.aiEnabled ?? false}
-              className="h-full w-full"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <p className="mb-2 text-lg font-medium text-gray-400">
-                  Keine Seite ausgewählt
-                </p>
-                <button
-                  onClick={() => setShowNewPageDialog(true)}
-                  className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700"
-                >
-                  Erste Seite erstellen
-                </button>
-              </div>
+      {/* Scrollable page stack */}
+      <main className="flex-1 overflow-y-auto bg-gray-100">
+        {pages.length === 0 ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="text-center">
+              <p className="mb-2 text-lg font-medium text-gray-400">
+                Keine Seiten vorhanden
+              </p>
+              <button
+                onClick={() => setShowNewPageDialog(true)}
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700"
+              >
+                Erste Seite erstellen
+              </button>
             </div>
-          )}
-        </main>
-      </div>
+          </div>
+        ) : (
+          <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
+            {pages.map((page, index) => (
+              <section key={page.id} className="flex flex-col">
+                {/* Page header */}
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-500">
+                    {page.title || `Seite ${index + 1}`}
+                  </span>
+                  {isTeacher && pages.length > 1 && (
+                    <button
+                      onClick={() => handleDeletePage(page.id)}
+                      className="rounded p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                      title="Seite löschen"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {/* Canvas — aspect ratio matches A4 (794×1123) */}
+                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm" style={{ aspectRatio: `${A4_WIDTH_PX} / ${A4_HEIGHT_PX}` }}>
+                  <WhiteboardCanvas
+                    key={page.id}
+                    pageId={page.id}
+                    backgroundType={page.backgroundType}
+                    onMount={activePageId === page.id ? handleStageMount : undefined}
+                    onConnectionStatusChange={activePageId === page.id ? setConnectionStatus : undefined}
+                    aiEnabled={session?.user?.aiEnabled ?? false}
+                    className="h-full w-full"
+                  />
+                </div>
+              </section>
+            ))}
+
+            {/* Add page button */}
+            <button
+              onClick={() => setShowNewPageDialog(true)}
+              className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-8 text-sm font-medium text-gray-400 transition-colors hover:border-violet-400 hover:text-violet-500"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Neue Seite
+            </button>
+          </div>
+        )}
+      </main>
 
       {/* New page dialog */}
       <NewPageDialog

@@ -653,7 +653,47 @@ export function WhiteboardCanvas({
     return () => window.removeEventListener("paste", handlePaste);
   }, [pageId, addShape]);
 
-  // Keyboard shortcuts (undo/redo, space for pan)
+  // Copy/Cut selected shapes to localStorage clipboard
+  const copySelectedShapes = useCallback((cut: boolean) => {
+    if (selectTool.selectedIds.size === 0) return;
+    const copied: Shape[] = [];
+    for (const id of selectTool.selectedIds) {
+      const shape = shapes.get(id);
+      if (shape) copied.push(structuredClone(shape));
+    }
+    if (copied.length === 0) return;
+    localStorage.setItem("mathboard-clipboard", JSON.stringify(copied));
+    if (cut) {
+      for (const id of selectTool.selectedIds) {
+        deleteShape(id);
+      }
+      selectTool.setSelectedIds(new Set());
+    }
+  }, [selectTool, shapes, deleteShape]);
+
+  // Paste shapes from localStorage clipboard
+  const pasteShapes = useCallback(() => {
+    const raw = localStorage.getItem("mathboard-clipboard");
+    if (!raw) return;
+    try {
+      const copied: Shape[] = JSON.parse(raw);
+      const newIds = new Set<string>();
+      const OFFSET = 20;
+      for (const shape of copied) {
+        const newId = createShapeId();
+        newIds.add(newId);
+        addShape({ ...shape, id: newId, x: shape.x + OFFSET, y: shape.y + OFFSET });
+      }
+      // Update clipboard with offset positions so repeated paste cascades
+      const shifted = copied.map((s) => ({ ...s, x: s.x + OFFSET, y: s.y + OFFSET }));
+      localStorage.setItem("mathboard-clipboard", JSON.stringify(shifted));
+      selectTool.setSelectedIds(newIds);
+    } catch {
+      // Invalid clipboard data
+    }
+  }, [addShape, selectTool]);
+
+  // Keyboard shortcuts (undo/redo, space for pan, copy/cut/paste)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Undo/Redo
@@ -667,6 +707,25 @@ export function WhiteboardCanvas({
       }
       if (e.key === " " && !e.repeat) {
         zoomPan.spaceDownRef.current = true;
+      }
+      // Copy (Cmd+C)
+      if ((e.metaKey || e.ctrlKey) && e.key === "c" && activeTool === "select") {
+        e.preventDefault();
+        copySelectedShapes(false);
+      }
+      // Cut (Cmd+X)
+      if ((e.metaKey || e.ctrlKey) && e.key === "x" && activeTool === "select") {
+        e.preventDefault();
+        copySelectedShapes(true);
+      }
+      // Paste (Cmd+V) — only paste shapes when in select tool; image paste handled separately
+      if ((e.metaKey || e.ctrlKey) && e.key === "v" && activeTool === "select") {
+        // Check if clipboard has shapes (don't interfere with image paste)
+        const raw = localStorage.getItem("mathboard-clipboard");
+        if (raw) {
+          e.preventDefault();
+          pasteShapes();
+        }
       }
       // Delete key for select tool
       if (activeTool === "select" && (e.key === "Delete" || e.key === "Backspace")) {
@@ -686,7 +745,7 @@ export function WhiteboardCanvas({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [undo, redo, activeTool, zoomPan, selectTool]);
+  }, [undo, redo, activeTool, zoomPan, selectTool, copySelectedShapes, pasteShapes]);
 
   // --- Stage event handlers ---
 

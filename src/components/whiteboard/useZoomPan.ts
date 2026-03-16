@@ -33,6 +33,27 @@ export function useZoomPan({ containerWidth, containerHeight, pageWidth, pageHei
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Clamp position so the page always stays partially visible.
+  // Allow panning until only `margin` px of the page remain on screen.
+  const clamp = useCallback(
+    (x: number, y: number, scale: number): { x: number; y: number } => {
+      const margin = 100; // px of page that must stay visible
+      const scaledW = pageWidth * scale;
+      const scaledH = pageHeight * scale;
+
+      const minX = containerWidth - scaledW - margin;
+      const maxX = margin;
+      const minY = containerHeight - scaledH - margin;
+      const maxY = margin;
+
+      return {
+        x: Math.min(Math.max(x, minX), maxX),
+        y: Math.min(Math.max(y, minY), maxY),
+      };
+    },
+    [containerWidth, containerHeight, pageWidth, pageHeight],
+  );
+
   const isPanningRef = useRef(false);
   const lastPointerRef = useRef({ x: 0, y: 0 });
   const spaceDownRef = useRef(false);
@@ -72,18 +93,14 @@ export function useZoomPan({ containerWidth, containerHeight, pageWidth, pageHei
         y: (pointer.y - s.y) / oldScale,
       };
 
-      setState({
-        scale: newScale,
-        x: pointer.x - mousePointTo.x * newScale,
-        y: pointer.y - mousePointTo.y * newScale,
-      });
+      const newX = pointer.x - mousePointTo.x * newScale;
+      const newY = pointer.y - mousePointTo.y * newScale;
+      const clamped = clamp(newX, newY, newScale);
+      setState({ scale: newScale, ...clamped });
     } else if (Math.abs(e.evt.deltaX) > 0 || Math.abs(e.evt.deltaY) > 0) {
       // Two-finger drag (Mac trackpad) or mousewheel — pan
-      setState({
-        ...s,
-        x: s.x - e.evt.deltaX,
-        y: s.y - e.evt.deltaY,
-      });
+      const clamped = clamp(s.x - e.evt.deltaX, s.y - e.evt.deltaY, s.scale);
+      setState({ ...s, ...clamped });
     }
   }, []);
 
@@ -109,8 +126,11 @@ export function useZoomPan({ containerWidth, containerHeight, pageWidth, pageHei
     const dx = screenX - lastPointerRef.current.x;
     const dy = screenY - lastPointerRef.current.y;
     lastPointerRef.current = { x: screenX, y: screenY };
-    setState((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-  }, []);
+    setState((prev) => {
+      const clamped = clamp(prev.x + dx, prev.y + dy, prev.scale);
+      return { ...prev, ...clamped };
+    });
+  }, [clamp]);
 
   const stopPan = useCallback(() => {
     isPanningRef.current = false;
