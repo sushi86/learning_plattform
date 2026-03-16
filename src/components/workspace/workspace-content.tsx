@@ -210,7 +210,14 @@ export default function WorkspaceContent({
         getStageImage: async () => {
           const stage = stageRef.current;
           if (!stage) return null;
-          return stage.toDataURL({ pixelRatio: 3 });
+          // Export only the A4 area at high DPI, ignoring current zoom/pan
+          return stage.toDataURL({
+            x: 0,
+            y: 0,
+            width: A4_WIDTH_PX,
+            height: A4_HEIGHT_PX,
+            pixelRatio: 3,
+          });
         },
         onProgress: (current, total) => {
           setPdfProgress({ current, total });
