@@ -43,18 +43,22 @@ export function Toolbar({
       <button
         onClick={onUndo}
         disabled={!canUndo}
-        className="flex items-center justify-center w-9 h-9 rounded-lg text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-700"
         title="Rückgängig (Strg+Z)"
       >
-        ↩
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 7v6h6" /><path d="M3 13a9 9 0 0 1 15.36-6.36L21 9" />
+        </svg>
       </button>
       <button
         onClick={onRedo}
         disabled={!canRedo}
-        className="flex items-center justify-center w-9 h-9 rounded-lg text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-700"
         title="Wiederholen (Strg+Shift+Z)"
       >
-        ↪
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 7v6h-6" /><path d="M21 13a9 9 0 0 0-15.36-6.36L3 9" />
+        </svg>
       </button>
 
       <div className="w-px h-6 bg-gray-200 mx-1" />
