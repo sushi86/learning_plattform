@@ -343,14 +343,50 @@ export function WhiteboardCanvas({
 
       const result: AiSolveResponse = await res.json();
       const groupId = createShapeId();
-      const startY = aiSelection.bounds.y + aiSelection.bounds.height + 20;
+      const stepHeight = 60;
+      const totalNeeded = result.steps.length * stepHeight;
+      const selBottom = aiSelection.bounds.y + aiSelection.bounds.height;
+
+      // Find the lowest existing shape to avoid overlaps
+      let lowestY = selBottom;
+      for (const s of shapes.values()) {
+        let shapeBottom = s.y;
+        if (s.type === "draw" || s.type === "line") {
+          const pts = s.props.points;
+          for (let i = 1; i < pts.length; i += 2) shapeBottom = Math.max(shapeBottom, s.y + pts[i]);
+        } else if (s.type === "image") {
+          shapeBottom = s.y + s.props.height;
+        } else if (s.type === "ai-step") {
+          shapeBottom = s.y + 50;
+        } else if (s.type === "ai-correction") {
+          shapeBottom = s.y + 80;
+        } else if (s.type === "text") {
+          shapeBottom = s.y + (s.props.fontSize || 18) * 2;
+        }
+        // Only consider shapes near the selection x range
+        if (shapeBottom > selBottom && shapeBottom > lowestY) {
+          lowestY = shapeBottom;
+        }
+      }
+
+      // Place 30px below the selection or lowest overlapping content
+      let startY = selBottom + 30;
+      // If that would overlap existing content below, push further down
+      if (lowestY > selBottom && lowestY < selBottom + totalNeeded + 30) {
+        startY = lowestY + 30;
+      }
+      // If response would overflow page, start on next page area
+      const pageBottom = Math.ceil(startY / A4_HEIGHT_PX) * A4_HEIGHT_PX;
+      if (startY + totalNeeded > pageBottom && startY + totalNeeded - pageBottom > totalNeeded * 0.3) {
+        startY = pageBottom + 40;
+      }
 
       result.steps.forEach((step, i) => {
         addShape({
           id: createShapeId(),
           type: "ai-step",
           x: aiSelection.bounds.x,
-          y: startY + i * 60,
+          y: startY + i * stepHeight,
           color: "#7c3aed",
           source: "ai",
           props: {
@@ -396,14 +432,46 @@ export function WhiteboardCanvas({
 
       const result: AiCheckResponse = await res.json();
       const groupId = createShapeId();
-      const startY = aiSelection.bounds.y + aiSelection.bounds.height + 20;
+      const stepHeight = 80;
+      const totalNeeded = result.steps.length * stepHeight;
+      const selBottom = aiSelection.bounds.y + aiSelection.bounds.height;
+
+      // Find the lowest existing shape to avoid overlaps
+      let lowestY = selBottom;
+      for (const s of shapes.values()) {
+        let shapeBottom = s.y;
+        if (s.type === "draw" || s.type === "line") {
+          const pts = s.props.points;
+          for (let i = 1; i < pts.length; i += 2) shapeBottom = Math.max(shapeBottom, s.y + pts[i]);
+        } else if (s.type === "image") {
+          shapeBottom = s.y + s.props.height;
+        } else if (s.type === "ai-step") {
+          shapeBottom = s.y + 50;
+        } else if (s.type === "ai-correction") {
+          shapeBottom = s.y + 80;
+        } else if (s.type === "text") {
+          shapeBottom = s.y + (s.props.fontSize || 18) * 2;
+        }
+        if (shapeBottom > selBottom && shapeBottom > lowestY) {
+          lowestY = shapeBottom;
+        }
+      }
+
+      let startY = selBottom + 30;
+      if (lowestY > selBottom && lowestY < selBottom + totalNeeded + 30) {
+        startY = lowestY + 30;
+      }
+      const pageBottom = Math.ceil(startY / A4_HEIGHT_PX) * A4_HEIGHT_PX;
+      if (startY + totalNeeded > pageBottom && startY + totalNeeded - pageBottom > totalNeeded * 0.3) {
+        startY = pageBottom + 40;
+      }
 
       result.steps.forEach((step, i) => {
         addShape({
           id: createShapeId(),
           type: "ai-correction",
           x: aiSelection.bounds.x,
-          y: startY + i * 80,
+          y: startY + i * stepHeight,
           color: step.isCorrect ? "#16a34a" : "#dc2626",
           source: "ai",
           props: {
@@ -759,9 +827,10 @@ export function WhiteboardCanvas({
             }
           })}
 
-          {/* Selection indicator */}
-          {activeTool === "select" && selectTool.selectedId && shapes.has(selectTool.selectedId) && (() => {
-            const sel = shapes.get(selectTool.selectedId!)!;
+          {/* Selection indicators for all selected shapes */}
+          {activeTool === "select" && selectTool.selectedIds.size > 0 && [...selectTool.selectedIds].map((id) => {
+            const sel = shapes.get(id);
+            if (!sel) return null;
             let bx = sel.x, by = sel.y, bw = 100, bh = 50;
             if (sel.type === "image") { bw = sel.props.width; bh = sel.props.height; }
             else if (sel.type === "text") { bw = sel.props.width || 200; bh = sel.props.fontSize * 2; }
@@ -776,9 +845,9 @@ export function WhiteboardCanvas({
               bx = sel.x + minX; by = sel.y + minY; bw = maxX - minX; bh = maxY - minY;
             }
             return (
-              <>
+              <Group key={`sel-${id}`}>
                 <Rect x={bx - 4} y={by - 4} width={bw + 8} height={bh + 8} stroke="#2563eb" strokeWidth={1.5} dash={[6, 3]} listening={false} />
-                {sel.type === "image" && (
+                {sel.type === "image" && selectTool.selectedIds.size === 1 && (
                   <Rect
                     x={bx + bw - 4}
                     y={by + bh - 4}
@@ -791,9 +860,9 @@ export function WhiteboardCanvas({
                     listening={false}
                   />
                 )}
-              </>
+              </Group>
             );
-          })()}
+          })}
         </Layer>
 
         {/* Tool overlay layer */}
@@ -821,6 +890,20 @@ export function WhiteboardCanvas({
               lineCap="round"
               opacity={0.7}
               dash={[8, 4]}
+            />
+          )}
+          {/* Select-tool rectangle selection preview */}
+          {selectTool.rectPreview && (
+            <Rect
+              x={selectTool.rectPreview.x}
+              y={selectTool.rectPreview.y}
+              width={selectTool.rectPreview.width}
+              height={selectTool.rectPreview.height}
+              stroke="#2563eb"
+              strokeWidth={1.5}
+              dash={[6, 3]}
+              fill="rgba(37, 99, 235, 0.06)"
+              listening={false}
             />
           )}
           {/* Rect-select preview during drawing */}
