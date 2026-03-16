@@ -1,30 +1,21 @@
 "use client";
 
-/**
- * Y.js WebSocket Sync Hook for tldraw
- *
- * Connects to the WebSocket server, syncs Y.js document with tldraw's store,
- * handles reconnection with exponential backoff, and offline queueing.
- */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
-import type { Editor, TLRecord, TLStoreEventInfo } from "tldraw";
-
-/* ---------- Types ---------- */
+import type { Shape } from "@/components/whiteboard/types";
 
 export type ConnectionStatus = "connected" | "reconnecting" | "offline";
 
-/* ---------- Sync protocol message types ---------- */
-
+/* --- Sync protocol --- */
 const MSG_SYNC_STEP1 = 0;
 const MSG_SYNC_STEP2 = 1;
 const MSG_UPDATE = 2;
 
-function encodeSyncStep1(stateVector: Uint8Array): Uint8Array {
-  const msg = new Uint8Array(1 + stateVector.length);
+function encodeSyncStep1(sv: Uint8Array): Uint8Array {
+  const msg = new Uint8Array(1 + sv.length);
   msg[0] = MSG_SYNC_STEP1;
-  msg.set(stateVector, 1);
+  msg.set(sv, 1);
   return msg;
 }
 
@@ -35,111 +26,85 @@ function encodeUpdate(update: Uint8Array): Uint8Array {
   return msg;
 }
 
-/* ---------- Hook ---------- */
+/* --- Hook --- */
 
 interface UseYjsSyncOptions {
   pageId: string;
   token: string | null;
-  editor: Editor | null;
 }
 
 interface UseYjsSyncReturn {
   connectionStatus: ConnectionStatus;
+  shapes: Map<string, Shape>;
+  addShape: (shape: Shape) => void;
+  updateShape: (id: string, updates: Partial<Shape>) => void;
+  deleteShape: (id: string) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
-export function useYjsSync({
-  pageId,
-  token,
-  editor,
-}: UseYjsSyncOptions): UseYjsSyncReturn {
-  const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>("offline");
+export function useYjsSync({ pageId, token }: UseYjsSyncOptions): UseYjsSyncReturn {
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("offline");
+  const [shapes, setShapes] = useState<Map<string, Shape>>(new Map());
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
-  const wsRef = useRef<WebSocket | null>(null);
   const docRef = useRef<Y.Doc | null>(null);
+  const yShapesRef = useRef<Y.Map<Shape> | null>(null);
+  const undoManagerRef = useRef<Y.UndoManager | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const idbRef = useRef<IndexeddbPersistence | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  const bridgeCleanupRef = useRef<(() => void) | null>(null);
 
-  // Connect when deps are ready
+  // Sync Y.Map state to React state
+  const syncToReact = useCallback(() => {
+    const yShapes = yShapesRef.current;
+    if (!yShapes) return;
+    const map = new Map<string, Shape>();
+    yShapes.forEach((val, key) => map.set(key, val));
+    setShapes(map);
+  }, []);
+
+  const updateUndoState = useCallback(() => {
+    const um = undoManagerRef.current;
+    if (um) {
+      setCanUndo(um.undoStack.length > 0);
+      setCanRedo(um.redoStack.length > 0);
+    }
+  }, []);
+
+  // Initialize Y.Doc and connect
   useEffect(() => {
-    if (!pageId || !token || !editor) return;
+    if (!pageId || !token) return;
 
-    // Initialize Y.Doc
     const doc = new Y.Doc();
     docRef.current = doc;
-    const yRecords = doc.getMap<TLRecord>("tldraw_records");
+    const yShapes = doc.getMap<Shape>("shapes");
+    yShapesRef.current = yShapes;
 
-    // Set up IndexedDB persistence for offline support
+    // Undo manager
+    const undoManager = new Y.UndoManager(yShapes);
+    undoManagerRef.current = undoManager;
+    undoManager.on("stack-item-added", updateUndoState);
+    undoManager.on("stack-item-popped", updateUndoState);
+
+    // IndexedDB persistence
     const idb = new IndexeddbPersistence(`mathboard-page-${pageId}`, doc);
     idbRef.current = idb;
 
-    // --- Bridge Y.js ↔ tldraw store ---
+    // Observe Y.Map changes → update React state
+    const observer = () => syncToReact();
+    yShapes.observeDeep(observer);
 
-    // 1. Y.Doc → tldraw store: when remote updates arrive
-    const yObserver = (
-      events: Y.YMapEvent<TLRecord>[],
-      txn: Y.Transaction,
-    ) => {
-      if (txn.origin === "tldraw") return; // Skip our own changes
+    // Load from IDB
+    idb.on("synced", () => syncToReact());
 
-      editor.store.mergeRemoteChanges(() => {
-        for (const event of events) {
-          event.changes.keys.forEach((change, key) => {
-            switch (change.action) {
-              case "add":
-              case "update": {
-                const record = yRecords.get(key);
-                if (record) {
-                  try {
-                    editor.store.put([record]);
-                  } catch {
-                    // Record type might not match — skip silently
-                  }
-                }
-                break;
-              }
-              case "delete": {
-                try {
-                  editor.store.remove([key as TLRecord["id"]]);
-                } catch {
-                  // Already deleted — skip
-                }
-                break;
-              }
-            }
-          });
-        }
-      });
-    };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    yRecords.observeDeep(yObserver as any);
-
-    // 2. tldraw store → Y.Doc: when local changes happen
-    const storeListener = ({ changes }: TLStoreEventInfo) => {
-      doc.transact(() => {
-        for (const record of Object.values(changes.added)) {
-          yRecords.set(record.id, record as TLRecord);
-        }
-        for (const [, to] of Object.values(changes.updated)) {
-          yRecords.set(to.id, to as TLRecord);
-        }
-        for (const record of Object.values(changes.removed)) {
-          yRecords.delete(record.id);
-        }
-      }, "tldraw");
-    };
-    const removeStoreListener = editor.store.listen(storeListener, {
-      source: "user",
-      scope: "document",
-    });
-
-    // 3. Y.Doc updates → send over WebSocket
+    // Y.Doc updates → send over WebSocket
     const docUpdateHandler = (update: Uint8Array, origin: unknown) => {
-      if (origin === "remote") return; // Don't echo remote updates back
+      if (origin === "remote") return;
       const ws = wsRef.current;
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(encodeUpdate(update));
@@ -147,77 +112,36 @@ export function useYjsSync({
     };
     doc.on("update", docUpdateHandler);
 
-    bridgeCleanupRef.current = () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      yRecords.unobserveDeep(yObserver as any);
-      removeStoreListener();
-      doc.off("update", docUpdateHandler);
-    };
-
-    // Load existing Y.Doc records into tldraw if we have them from IndexedDB
-    idb.on("synced", () => {
-      if (yRecords.size > 0) {
-        editor.store.mergeRemoteChanges(() => {
-          const records: TLRecord[] = [];
-          yRecords.forEach((record) => {
-            records.push(record);
-          });
-          if (records.length > 0) {
-            try {
-              editor.store.put(records);
-            } catch {
-              // Some records might conflict — that's OK
-            }
-          }
-        });
-      }
-    });
-
-    // --- WebSocket connection with reconnect ---
-
+    // --- WebSocket ---
     function connectWs() {
-      // Clean up existing connection
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws/page/${pageId}?token=${encodeURIComponent(token!)}`;  // token is checked non-null at effect start
-
+      const wsUrl = `${protocol}//${window.location.host}/ws/page/${pageId}?token=${encodeURIComponent(token!)}`;
       const ws = new WebSocket(wsUrl);
       ws.binaryType = "arraybuffer";
       wsRef.current = ws;
-
       setConnectionStatus("reconnecting");
 
       ws.onopen = () => {
         console.log(`[yjs-sync] Connected to page ${pageId}`);
         setConnectionStatus("connected");
         reconnectAttemptsRef.current = 0;
-
-        // Send sync step 1: our state vector so server sends us missing updates
-        const stateVector = Y.encodeStateVector(doc);
-        ws.send(encodeSyncStep1(stateVector));
+        const sv = Y.encodeStateVector(doc);
+        ws.send(encodeSyncStep1(sv));
       };
 
       ws.onmessage = (event) => {
         try {
           const data = new Uint8Array(event.data as ArrayBuffer);
           if (data.length === 0) return;
-
           const msgType = data[0];
           const payload = data.slice(1);
-
-          switch (msgType) {
-            case MSG_SYNC_STEP2:
-            case MSG_UPDATE: {
-              // Apply remote update to our Y.Doc
-              Y.applyUpdate(doc, payload, "remote");
-              break;
-            }
-            default:
-              break;
+          if (msgType === MSG_SYNC_STEP2 || msgType === MSG_UPDATE) {
+            Y.applyUpdate(doc, payload, "remote");
           }
         } catch (err) {
           console.error("[yjs-sync] Error handling message:", err);
@@ -225,58 +149,58 @@ export function useYjsSync({
       };
 
       ws.onclose = (event) => {
-        console.log(
-          `[yjs-sync] Disconnected from page ${pageId} (code: ${event.code})`,
-        );
+        console.log(`[yjs-sync] Disconnected (code: ${event.code})`);
         wsRef.current = null;
-
         if (event.code !== 1000 && event.code !== 1001) {
-          // Unexpected close — reconnect with exponential backoff
           setConnectionStatus("reconnecting");
           const attempts = reconnectAttemptsRef.current;
-          const delay = Math.min(1000 * Math.pow(2, attempts), 30000);
+          const delay = Math.min(1000 * 2 ** attempts, 30000);
           reconnectAttemptsRef.current = attempts + 1;
-
-          console.log(
-            `[yjs-sync] Reconnecting in ${delay}ms (attempt ${attempts + 1})`,
-          );
           reconnectTimeoutRef.current = setTimeout(connectWs, delay);
         } else {
           setConnectionStatus("offline");
         }
       };
 
-      ws.onerror = (err) => {
-        console.error("[yjs-sync] WebSocket error:", err);
-      };
+      ws.onerror = (err) => console.error("[yjs-sync] WebSocket error:", err);
     }
 
     connectWs();
 
-    // Cleanup
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      if (bridgeCleanupRef.current) {
-        bridgeCleanupRef.current();
-        bridgeCleanupRef.current = null;
-      }
-      if (wsRef.current) {
-        wsRef.current.close(1000, "Component unmount");
-        wsRef.current = null;
-      }
-      if (idbRef.current) {
-        idbRef.current.destroy();
-        idbRef.current = null;
-      }
-      if (docRef.current) {
-        docRef.current.destroy();
-        docRef.current = null;
-      }
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      yShapes.unobserveDeep(observer);
+      doc.off("update", docUpdateHandler);
+      undoManager.destroy();
+      if (wsRef.current) { wsRef.current.close(1000); wsRef.current = null; }
+      if (idbRef.current) { idbRef.current.destroy(); idbRef.current = null; }
+      doc.destroy();
+      docRef.current = null;
+      yShapesRef.current = null;
+      undoManagerRef.current = null;
     };
-  }, [pageId, token, editor]);
+  }, [pageId, token, syncToReact, updateUndoState]);
 
-  return { connectionStatus };
+  // Mutators
+  const addShape = useCallback((shape: Shape) => {
+    yShapesRef.current?.set(shape.id, shape);
+  }, []);
+
+  const updateShape = useCallback((id: string, updates: Partial<Shape>) => {
+    const yShapes = yShapesRef.current;
+    if (!yShapes) return;
+    const existing = yShapes.get(id);
+    if (existing) {
+      yShapes.set(id, { ...existing, ...updates } as Shape);
+    }
+  }, []);
+
+  const deleteShape = useCallback((id: string) => {
+    yShapesRef.current?.delete(id);
+  }, []);
+
+  const undo = useCallback(() => undoManagerRef.current?.undo(), []);
+  const redo = useCallback(() => undoManagerRef.current?.redo(), []);
+
+  return { connectionStatus, shapes, addShape, updateShape, deleteShape, undo, redo, canUndo, canRedo };
 }
