@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canManageInvites } from "@/lib/permissions";
 
 /**
  * POST /api/workspaces/[id]/invite
@@ -16,26 +17,27 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user.role !== "TEACHER") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const { id: workspaceId } = await params;
 
-  // Verify ownership
+  // Verify workspace exists
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
+    select: { id: true },
   });
 
   if (!workspace) {
     return NextResponse.json(
-      { error: "Workspace nicht gefunden." },
+      { error: "Workspace nicht gefunden" },
       { status: 404 },
     );
   }
 
-  if (workspace.ownerId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const canInvite = await canManageInvites(session.user.id, workspaceId);
+  if (!canInvite) {
+    return NextResponse.json(
+      { error: "Nur der Workspace-Besitzer kann Einladungslinks erstellen" },
+      { status: 403 },
+    );
   }
 
   // Generate cryptographically random token
@@ -81,26 +83,27 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user.role !== "TEACHER") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const { id: workspaceId } = await params;
 
-  // Verify ownership
+  // Verify workspace exists
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
+    select: { id: true },
   });
 
   if (!workspace) {
     return NextResponse.json(
-      { error: "Workspace nicht gefunden." },
+      { error: "Workspace nicht gefunden" },
       { status: 404 },
     );
   }
 
-  if (workspace.ownerId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const canInvite = await canManageInvites(session.user.id, workspaceId);
+  if (!canInvite) {
+    return NextResponse.json(
+      { error: "Nur der Workspace-Besitzer kann Einladungslinks verwalten" },
+      { status: 403 },
+    );
   }
 
   const inviteLinks = await prisma.inviteLink.findMany({

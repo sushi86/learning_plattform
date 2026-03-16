@@ -8,6 +8,7 @@
     "start": "NODE_ENV=production node --import tsx server.mts",
     "dev:next": "next dev",
     "lint": "eslint",
+    "test": "vitest run",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -39,7 +40,8 @@
     "prettier": "^3.8.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.0"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

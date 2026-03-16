@@ -1,17 +1,31 @@
 /**
- * WebSocket Authentication
+ * WebSocket Authentication & Authorization
  *
- * Validates JWT tokens from WebSocket handshake requests.
+ * Validates JWT tokens from WebSocket handshake requests
+ * and checks workspace membership for page access.
  * Uses the NextAuth decode function for compatibility with Auth.js v5 JWE tokens.
  */
 import { decode } from "@auth/core/jwt";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-interface WsUser {
+export interface WsUser {
   id: string;
   name: string;
   email: string;
   role: string;
 }
+
+/* ---------- Prisma (standalone for server context) ---------- */
+
+function createPrisma() {
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+  });
+  return new PrismaClient({ adapter });
+}
+
+const prisma = createPrisma();
 
 /**
  * Verify a NextAuth JWT token and extract user info.
@@ -47,6 +61,50 @@ export async function authenticateWsToken(
   } catch (err) {
     console.error("[ws-auth] JWT verification failed:", err);
     return null;
+  }
+}
+
+/**
+ * Check if a user can access a page via its workspace.
+ * Returns true if the user is the workspace owner or a member.
+ */
+export async function canAccessPageWs(
+  userId: string,
+  pageId: string,
+): Promise<boolean> {
+  try {
+    const page = await prisma.page.findUnique({
+      where: { id: pageId },
+      select: {
+        workspace: {
+          select: {
+            ownerId: true,
+          },
+        },
+        workspaceId: true,
+      },
+    });
+
+    if (!page) return false;
+
+    // Owner has access
+    if (page.workspace.ownerId === userId) return true;
+
+    // Check membership
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: page.workspaceId,
+          userId,
+        },
+      },
+      select: { id: true },
+    });
+
+    return !!membership;
+  } catch (err) {
+    console.error("[ws-auth] Workspace access check failed:", err);
+    return false;
   }
 }
 

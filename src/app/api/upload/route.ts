@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessPage } from "@/lib/permissions";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
@@ -20,7 +21,7 @@ function getUploadDir(): string {
 
 /**
  * POST /api/upload
- * Upload a file (image or PDF). Requires authentication.
+ * Upload a file (image or PDF). User must be workspace member or owner.
  * Body: multipart/form-data with fields: file, pageId
  */
 export async function POST(request: Request) {
@@ -70,30 +71,12 @@ export async function POST(request: Request) {
   }
 
   // Check that user has access to the page's workspace
-  const page = await prisma.page.findUnique({
-    where: { id: pageId },
-    select: {
-      id: true,
-      workspace: {
-        select: {
-          id: true,
-          ownerId: true,
-          members: { where: { userId }, select: { id: true } },
-        },
-      },
-    },
-  });
-
-  if (!page) {
+  const access = await canAccessPage(userId, pageId);
+  if (!access) {
     return NextResponse.json(
-      { error: "Seite nicht gefunden" },
-      { status: 404 },
+      { error: "Seite nicht gefunden oder kein Zugriff" },
+      { status: 403 },
     );
-  }
-
-  const ws = page.workspace;
-  if (ws.ownerId !== userId && ws.members.length === 0) {
-    return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
   // Generate unique filename

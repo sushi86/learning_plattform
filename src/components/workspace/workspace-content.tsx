@@ -12,6 +12,7 @@ import PageSidebar from "./page-sidebar";
 import NewPageDialog from "./new-page-dialog";
 import PdfExportDialog from "./pdf-export-dialog";
 import ConnectionStatusIndicator from "./connection-status";
+import MemberManagement from "./member-management";
 import type { PageItem, WorkspaceInfo } from "./types";
 
 interface WorkspaceContentProps {
@@ -31,6 +32,7 @@ export default function WorkspaceContent({
   const [showNewPageDialog, setShowNewPageDialog] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("offline");
+  const [showMembers, setShowMembers] = useState(false);
 
   // PDF export state
   const editorRef = useRef<Editor | null>(null);
@@ -271,11 +273,11 @@ export default function WorkspaceContent({
             <span className="hidden sm:inline">PDF</span>
           </button>
 
-          {/* Settings placeholder */}
+          {/* Members / Settings */}
           <button
+            onClick={() => setShowMembers(true)}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50"
-            title="Einstellungen (coming soon)"
-            disabled
+            title="Mitglieder verwalten"
           >
             <svg
               className="h-4 w-4"
@@ -347,6 +349,14 @@ export default function WorkspaceContent({
         onClose={() => setShowNewPageDialog(false)}
         onCreated={handlePageCreated}
         workspaceId={workspaceId}
+      />
+
+      {/* Member management dialog */}
+      <MemberManagement
+        workspaceId={workspaceId}
+        isTeacher={isTeacher}
+        open={showMembers}
+        onClose={() => setShowMembers(false)}
       />
 
       {/* PDF export progress dialog */}

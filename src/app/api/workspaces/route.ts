@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canCreateWorkspace } from "@/lib/permissions";
 
 /**
  * GET /api/workspaces
@@ -64,8 +65,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user.role !== "TEACHER") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canCreateWorkspace(session.user.role)) {
+    return NextResponse.json(
+      { error: "Nur Lehrer können Workspaces erstellen" },
+      { status: 403 },
+    );
   }
 
   const body = await request.json();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessWorkspace } from "@/lib/permissions";
 
 /**
  * PUT /api/workspaces/[id]/pages/reorder
@@ -18,28 +19,25 @@ export async function PUT(
   }
 
   const { id: workspaceId } = await params;
-  const userId = session.user.id;
 
-  // Check access: owner or member
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
-    select: { ownerId: true },
+    select: { id: true },
   });
 
   if (!workspace) {
     return NextResponse.json(
-      { error: "Workspace not found" },
+      { error: "Workspace nicht gefunden" },
       { status: 404 },
     );
   }
 
-  if (workspace.ownerId !== userId) {
-    const membership = await prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId } },
-    });
-    if (!membership) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+  const hasAccess = await canAccessWorkspace(session.user.id, workspaceId);
+  if (!hasAccess) {
+    return NextResponse.json(
+      { error: "Kein Zugriff auf diesen Workspace" },
+      { status: 403 },
+    );
   }
 
   const body = await request.json();

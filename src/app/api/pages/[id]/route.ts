@@ -1,40 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-/**
- * Helper: Check if a user has access to a page's workspace.
- * Returns the page with workspace info, or null.
- */
-async function getPageWithAccess(pageId: string, userId: string) {
-  const page = await prisma.page.findUnique({
-    where: { id: pageId },
-    include: {
-      workspace: {
-        select: { ownerId: true },
-      },
-    },
-  });
-
-  if (!page) return null;
-
-  // Check if user is owner
-  if (page.workspace.ownerId === userId) return page;
-
-  // Check if user is member
-  const membership = await prisma.workspaceMember.findUnique({
-    where: {
-      workspaceId_userId: {
-        workspaceId: page.workspaceId,
-        userId,
-      },
-    },
-  });
-
-  if (membership) return page;
-
-  return null;
-}
+import { canAccessPage, canDeletePage } from "@/lib/permissions";
 
 /**
  * PATCH /api/pages/[id]
@@ -51,11 +18,11 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const page = await getPageWithAccess(id, session.user.id);
 
-  if (!page) {
+  const access = await canAccessPage(session.user.id, id);
+  if (!access) {
     return NextResponse.json(
-      { error: "Page not found or no access" },
+      { error: "Seite nicht gefunden oder kein Zugriff" },
       { status: 404 },
     );
   }
@@ -118,21 +85,20 @@ export async function DELETE(
 
   const page = await prisma.page.findUnique({
     where: { id },
-    include: {
-      workspace: {
-        select: { ownerId: true },
-      },
-    },
+    select: { workspaceId: true },
   });
 
   if (!page) {
-    return NextResponse.json({ error: "Page not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Seite nicht gefunden" },
+      { status: 404 },
+    );
   }
 
-  // Only teachers (workspace owners) can delete pages
-  if (page.workspace.ownerId !== session.user.id) {
+  const canDelete = await canDeletePage(session.user.id, page.workspaceId);
+  if (!canDelete) {
     return NextResponse.json(
-      { error: "Only the workspace owner can delete pages" },
+      { error: "Nur der Workspace-Besitzer kann Seiten löschen" },
       { status: 403 },
     );
   }

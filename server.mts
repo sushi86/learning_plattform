@@ -15,6 +15,7 @@ import {
   authenticateWsToken,
   extractTokenFromUrl,
   extractPageIdFromUrl,
+  canAccessPageWs,
 } from "./src/server/ws-auth.js";
 import {
   handleConnection,
@@ -60,6 +61,14 @@ async function main() {
       const user = await authenticateWsToken(token);
       if (!user) {
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+
+      // Check workspace membership — user must be owner or member
+      const hasAccess = await canAccessPageWs(user.id, pageId);
+      if (!hasAccess) {
+        socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
         socket.destroy();
         return;
       }

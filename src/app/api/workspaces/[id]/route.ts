@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessWorkspace, canDeleteWorkspace } from "@/lib/permissions";
 import fs from "fs/promises";
 import path from "path";
 
@@ -18,7 +19,6 @@ export async function GET(
   }
 
   const { id } = await params;
-  const userId = session.user.id;
 
   const workspace = await prisma.workspace.findUnique({
     where: { id },
@@ -34,19 +34,17 @@ export async function GET(
 
   if (!workspace) {
     return NextResponse.json(
-      { error: "Workspace not found" },
+      { error: "Workspace nicht gefunden" },
       { status: 404 },
     );
   }
 
-  // Check access: owner or member
-  if (workspace.ownerId !== userId) {
-    const membership = await prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId: id, userId } },
-    });
-    if (!membership) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+  const hasAccess = await canAccessWorkspace(session.user.id, id);
+  if (!hasAccess) {
+    return NextResponse.json(
+      { error: "Kein Zugriff auf diesen Workspace" },
+      { status: 403 },
+    );
   }
 
   return NextResponse.json(workspace);
@@ -54,8 +52,8 @@ export async function GET(
 
 /**
  * DELETE /api/workspaces/[id]
- * Teachers only (owner): delete workspace with cascade
- * Also cleans up uploaded files from the filesystem
+ * Owner only: delete workspace with cascade.
+ * Also cleans up uploaded files from the filesystem.
  */
 export async function DELETE(
   _request: Request,
@@ -66,13 +64,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user.role !== "TEACHER") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const { id } = await params;
 
-  // Check ownership
   const workspace = await prisma.workspace.findUnique({
     where: { id },
     select: { ownerId: true },
@@ -80,14 +73,15 @@ export async function DELETE(
 
   if (!workspace) {
     return NextResponse.json(
-      { error: "Workspace not found" },
+      { error: "Workspace nicht gefunden" },
       { status: 404 },
     );
   }
 
-  if (workspace.ownerId !== session.user.id) {
+  const canDelete = await canDeleteWorkspace(session.user.id, id);
+  if (!canDelete) {
     return NextResponse.json(
-      { error: "Only the owner can delete this workspace" },
+      { error: "Nur der Workspace-Besitzer kann diesen Workspace löschen" },
       { status: 403 },
     );
   }

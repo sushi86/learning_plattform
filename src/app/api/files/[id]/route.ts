@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessWorkspace } from "@/lib/permissions";
 import fs from "fs/promises";
 
 /**
@@ -17,7 +18,6 @@ export async function GET(
   }
 
   const { id } = await params;
-  const userId = session.user.id;
 
   const fileUpload = await prisma.fileUpload.findUnique({
     where: { id },
@@ -27,12 +27,7 @@ export async function GET(
       storagePath: true,
       page: {
         select: {
-          workspace: {
-            select: {
-              ownerId: true,
-              members: { where: { userId }, select: { id: true } },
-            },
-          },
+          workspaceId: true,
         },
       },
     },
@@ -46,9 +41,15 @@ export async function GET(
   }
 
   // Auth check: user must be workspace owner or member
-  const ws = fileUpload.page.workspace;
-  if (ws.ownerId !== userId && ws.members.length === 0) {
-    return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
+  const hasAccess = await canAccessWorkspace(
+    session.user.id,
+    fileUpload.page.workspaceId,
+  );
+  if (!hasAccess) {
+    return NextResponse.json(
+      { error: "Kein Zugriff auf diese Datei" },
+      { status: 403 },
+    );
   }
 
   // Read and serve file
