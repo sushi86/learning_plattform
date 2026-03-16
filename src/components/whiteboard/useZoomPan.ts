@@ -23,16 +23,11 @@ interface UseZoomPanOptions {
 export function useZoomPan({ containerWidth, containerHeight, pageWidth, pageHeight }: UseZoomPanOptions) {
   /** Ref to the container element — needed to calculate offset from viewport */
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [state, setState] = useState<ZoomPanState>(() => {
-    const padding = 40;
-    const scaleX = (containerWidth - padding * 2) / pageWidth;
-    const scaleY = (containerHeight - padding * 2) / pageHeight;
-    const scale = Math.min(scaleX, scaleY, 1);
-    return {
-      scale,
-      x: (containerWidth - pageWidth * scale) / 2,
-      y: (containerHeight - pageHeight * scale) / 2,
-    };
+  // Start with a safe default — fitToPage() will be called once container size is known
+  const [state, setState] = useState<ZoomPanState>({
+    scale: 1,
+    x: 0,
+    y: 0,
   });
 
   const stateRef = useRef(state);
