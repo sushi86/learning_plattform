@@ -124,7 +124,7 @@ type Shape = DrawShape | LineShape | TextShape | ImageShape;
 - Local change → update Y.Map → Y.Doc update → WebSocket
 - Remote Y.Map change → update Konva shapes
 - Origin tagging ("local" / "remote") to prevent echo loops
-- **During active drawing:** points are accumulated locally and only written to Y.Map on `pointerup` (completed stroke). This avoids excessive Y.js updates during drawing. Remote users see the finished stroke, not live preview of in-progress strokes.
+- **Live drawing sync:** During active freehand drawing, new points are appended to a `Y.Array` inside the shape entry. Y.js sends only the delta (new points), not the entire stroke. Remote users see strokes appear in real-time. On `pointerup`, the shape is finalized. This enables live collaboration (e.g., teacher watches student drawing) with minimal network overhead.
 
 **Server-side:** No changes. `yjs-rooms.ts` only handles Y.Doc binary updates, agnostic to content structure. WebSocket protocol unchanged.
 
