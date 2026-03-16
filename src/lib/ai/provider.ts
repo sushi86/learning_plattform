@@ -1,22 +1,18 @@
 import type { AiProvider, AiSolveResponse, AiCheckResponse, AiExplainResponse } from "./types";
+import { ClaudeAdapter } from "./claude-adapter";
+import { OpenAiAdapter } from "./openai-adapter";
 
 export function getAiProvider(): AiProvider {
   const provider = process.env.AI_PROVIDER;
   const apiKey = process.env.AI_API_KEY;
-
   if (!provider || !apiKey) {
     throw new Error("AI_PROVIDER and AI_API_KEY must be configured");
   }
-
   switch (provider) {
-    case "claude": {
-      const { ClaudeAdapter } = require("./claude-adapter");
+    case "claude":
       return new ClaudeAdapter(apiKey);
-    }
-    case "openai": {
-      const { OpenAiAdapter } = require("./openai-adapter");
+    case "openai":
       return new OpenAiAdapter(apiKey);
-    }
     default:
       throw new Error(`Unknown AI_PROVIDER: ${provider}`);
   }
