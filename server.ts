@@ -26,12 +26,27 @@ const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "localhost";
 const port = parseInt(process.env.PORT || "3000", 10);
 
+// Suppress known Next.js 16 Turbopack worker errors in dev.
+// Must be registered BEFORE next() initializes to intercept first.
+if (dev) {
+  process.on("uncaughtException", (err) => {
+    if (
+      err instanceof TypeError &&
+      err.message.includes("Unexpected response from worker")
+    ) {
+      return; // Known Turbopack HMR worker issue — safe to ignore
+    }
+    console.error("[server] Uncaught exception:", err);
+    process.exit(1);
+  });
+}
+
 async function main() {
   // Initialize Next.js
   const app = next({ dev, hostname, port });
+  await app.prepare();
   const handle = app.getRequestHandler();
   const upgradeHandler = app.getUpgradeHandler();
-  await app.prepare();
 
   // Create HTTP server
   const server = createServer((req, res) => {
@@ -81,7 +96,14 @@ async function main() {
     }
 
     // Everything else (including /_next/webpack-hmr) → Next.js
-    upgradeHandler(req, socket, head);
+    try {
+      upgradeHandler(req, socket, head);
+    } catch (err) {
+      // Next.js 16 Turbopack worker can throw during HMR upgrades
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+    }
   });
 
   // Handle new WebSocket connections

@@ -79,7 +79,7 @@ function RegisterForm() {
         redirect: false,
       });
 
-      if (result?.error) {
+      if (result?.error || !result?.ok) {
         setError("Konto erstellt, aber Anmeldung fehlgeschlagen.");
         return;
       }

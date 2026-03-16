@@ -61,7 +61,7 @@ function LoginForm() {
         redirect: false,
       });
 
-      if (result?.error) {
+      if (result?.error || !result?.ok) {
         setError("Ungültige E-Mail oder Passwort.");
         return;
       }

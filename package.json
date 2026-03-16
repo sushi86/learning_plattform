@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx --watch server.mts",
+    "dev": "tsx --watch-path server.ts --watch-path src/server server.ts",
     "build": "prisma generate && next build",
-    "start": "NODE_ENV=production node --import tsx server.mts",
+    "start": "NODE_ENV=production npx tsx server.ts",
     "dev:next": "next dev",
     "lint": "eslint",
     "test": "vitest run",
