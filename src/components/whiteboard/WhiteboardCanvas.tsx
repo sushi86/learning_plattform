@@ -477,7 +477,24 @@ export function WhiteboardCanvas({
               }
               bx = sel.x + minX; by = sel.y + minY; bw = maxX - minX; bh = maxY - minY;
             }
-            return <Rect x={bx - 4} y={by - 4} width={bw + 8} height={bh + 8} stroke="#2563eb" strokeWidth={1.5} dash={[6, 3]} listening={false} />;
+            return (
+              <>
+                <Rect x={bx - 4} y={by - 4} width={bw + 8} height={bh + 8} stroke="#2563eb" strokeWidth={1.5} dash={[6, 3]} listening={false} />
+                {sel.type === "image" && (
+                  <Rect
+                    x={bx + bw - 4}
+                    y={by + bh - 4}
+                    width={10}
+                    height={10}
+                    fill="#2563eb"
+                    stroke="#ffffff"
+                    strokeWidth={1}
+                    cornerRadius={2}
+                    listening={false}
+                  />
+                )}
+              </>
+            );
           })()}
         </Layer>
 
