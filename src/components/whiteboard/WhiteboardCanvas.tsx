@@ -25,6 +25,7 @@ import {
   LinedBackground,
   CoordinateBackground,
 } from "./backgrounds";
+import { FileUploadButton } from "./FileUploadButton";
 
 /* ---------- Background mapping ---------- */
 
@@ -37,7 +38,7 @@ const BACKGROUND_COMPONENTS: Record<BackgroundType, React.ComponentType> = {
 
 /* ---------- Custom toolbar ---------- */
 
-function CustomToolbarContent() {
+function CustomToolbarContent({ pageId }: { pageId?: string }) {
   return (
     <>
       <SelectToolbarItem />
@@ -49,15 +50,20 @@ function CustomToolbarContent() {
       <ArrowToolbarItem />
       <RectangleToolbarItem />
       <EllipseToolbarItem />
+      {pageId && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            borderLeft: "1px solid var(--color-muted-2, #e0e0e0)",
+            marginLeft: 4,
+            paddingLeft: 4,
+          }}
+        >
+          <FileUploadButton pageId={pageId} />
+        </div>
+      )}
     </>
-  );
-}
-
-function CustomToolbar() {
-  return (
-    <DefaultToolbar>
-      <CustomToolbarContent />
-    </DefaultToolbar>
   );
 }
 
@@ -66,6 +72,8 @@ function CustomToolbar() {
 export interface WhiteboardCanvasProps {
   /** Background pattern for the canvas page */
   backgroundType?: BackgroundType;
+  /** Page ID for file upload association */
+  pageId?: string;
   /** Callback when the editor instance is created */
   onMount?: (editor: Editor) => void;
   /** Additional CSS class for the container */
@@ -76,6 +84,7 @@ export interface WhiteboardCanvasProps {
 
 export function WhiteboardCanvas({
   backgroundType = "BLANK",
+  pageId,
   onMount,
   className,
 }: WhiteboardCanvasProps) {
@@ -84,7 +93,11 @@ export function WhiteboardCanvas({
   const components = useMemo<TLComponents>(
     () => ({
       Background: BackgroundComponent,
-      Toolbar: CustomToolbar,
+      Toolbar: () => (
+        <DefaultToolbar>
+          <CustomToolbarContent pageId={pageId} />
+        </DefaultToolbar>
+      ),
       // Hide UI elements not needed for MVP
       HelpMenu: null,
       MainMenu: null,
@@ -92,7 +105,7 @@ export function WhiteboardCanvas({
       NavigationPanel: null,
       MenuPanel: null,
     }),
-    [BackgroundComponent],
+    [BackgroundComponent, pageId],
   );
 
   const handleMount = useCallback(

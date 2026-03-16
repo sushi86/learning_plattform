@@ -255,6 +255,7 @@ export default function WorkspaceContent({
             <WhiteboardCanvas
               key={activePage.id}
               backgroundType={activePage.backgroundType}
+              pageId={activePage.id}
               className="h-full w-full"
             />
           ) : (
