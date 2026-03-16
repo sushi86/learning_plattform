@@ -5,6 +5,54 @@ import fs from "fs/promises";
 import path from "path";
 
 /**
+ * GET /api/workspaces/[id]
+ * Get a single workspace. User must be owner or member.
+ */
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const userId = session.user.id;
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      ownerId: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!workspace) {
+    return NextResponse.json(
+      { error: "Workspace not found" },
+      { status: 404 },
+    );
+  }
+
+  // Check access: owner or member
+  if (workspace.ownerId !== userId) {
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: id, userId } },
+    });
+    if (!membership) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  return NextResponse.json(workspace);
+}
+
+/**
  * DELETE /api/workspaces/[id]
  * Teachers only (owner): delete workspace with cascade
  * Also cleans up uploaded files from the filesystem
