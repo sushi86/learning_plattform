@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import WorkspaceCard from "./workspace-card";
 import CreateWorkspaceDialog from "./create-workspace-dialog";
 import DeleteWorkspaceDialog from "./delete-workspace-dialog";
+import InviteLinkDialog from "./invite-link-dialog";
 
 interface Workspace {
   id: string;
@@ -22,6 +23,10 @@ export default function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [inviteTarget, setInviteTarget] = useState<{
     id: string;
     name: string;
   } | null>(null);
@@ -171,6 +176,9 @@ export default function DashboardContent() {
                 onDelete={(id) =>
                   setDeleteTarget({ id, name: ws.name })
                 }
+                onInvite={(id, name) =>
+                  setInviteTarget({ id, name })
+                }
               />
             ))}
 
@@ -216,6 +224,15 @@ export default function DashboardContent() {
           workspaceName={deleteTarget.name}
           onClose={() => setDeleteTarget(null)}
           onDeleted={fetchWorkspaces}
+        />
+      )}
+
+      {inviteTarget && (
+        <InviteLinkDialog
+          open={true}
+          workspaceId={inviteTarget.id}
+          workspaceName={inviteTarget.name}
+          onClose={() => setInviteTarget(null)}
         />
       )}
     </div>

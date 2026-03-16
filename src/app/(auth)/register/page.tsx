@@ -1,18 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+interface InviteInfo {
+  workspaceName: string;
+  teacherName: string;
+}
+
 export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+        </div>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite");
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
+
+  // Fetch invite info if token is present
+  useEffect(() => {
+    if (inviteToken) {
+      fetch(`/api/invite/${inviteToken}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            setInviteInfo(data);
+          }
+        })
+        .catch(() => {
+          // Silently fail — register page still works without invite info
+        });
+    }
+  }, [inviteToken]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,10 +81,29 @@ export default function RegisterPage() {
 
       if (result?.error) {
         setError("Konto erstellt, aber Anmeldung fehlgeschlagen.");
-      } else {
-        router.push("/dashboard");
-        router.refresh();
+        return;
       }
+
+      // If invite token present, auto-redeem
+      if (inviteToken) {
+        try {
+          const redeemRes = await fetch(`/api/invite/${inviteToken}/redeem`, {
+            method: "POST",
+          });
+          const redeemData = await redeemRes.json();
+
+          if (redeemRes.ok && redeemData.workspaceId) {
+            router.push(`/workspace/${redeemData.workspaceId}`);
+            router.refresh();
+            return;
+          }
+        } catch {
+          // Redeem failed — still redirect to dashboard
+        }
+      }
+
+      router.push("/dashboard");
+      router.refresh();
     } catch {
       setError("Ein Fehler ist aufgetreten. Bitte versuche es erneut.");
     } finally {
@@ -58,6 +116,18 @@ export default function RegisterPage() {
       <h1 className="mb-6 text-center font-[family-name:var(--font-caveat)] text-4xl font-bold text-gray-900">
         Registrieren
       </h1>
+
+      {inviteInfo && (
+        <div className="mb-4 rounded-lg bg-violet-50 p-3 text-center">
+          <p className="text-sm text-violet-700">
+            Einladung zum Workspace{" "}
+            <span className="font-semibold">{inviteInfo.workspaceName}</span>
+          </p>
+          <p className="text-xs text-violet-500">
+            von {inviteInfo.teacherName}
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
@@ -163,7 +233,7 @@ export default function RegisterPage() {
       <p className="mt-6 text-center text-sm text-gray-600">
         Bereits ein Konto?{" "}
         <Link
-          href="/login"
+          href={inviteToken ? `/login?invite=${inviteToken}` : "/login"}
           className="font-medium text-blue-600 hover:text-blue-500"
         >
           Anmelden

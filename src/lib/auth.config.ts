@@ -30,10 +30,17 @@ export const authConfig: NextAuthConfig = {
       }
 
       // Auth routes: redirect to dashboard if already authenticated
+      // Exception: if invite token present, redirect to invite page instead
       const authPaths = ["/login", "/register"];
       const isAuthRoute = authPaths.some((path) => pathname.startsWith(path));
 
       if (isAuthRoute && isLoggedIn) {
+        const inviteToken = nextUrl.searchParams.get("invite");
+        if (inviteToken) {
+          return Response.redirect(
+            new URL(`/invite/${inviteToken}`, nextUrl.origin),
+          );
+        }
         return Response.redirect(new URL("/dashboard", nextUrl.origin));
       }
 
