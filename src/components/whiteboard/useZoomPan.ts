@@ -56,29 +56,40 @@ export function useZoomPan({ containerWidth, containerHeight, pageWidth, pageHei
 
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
-    const stage = e.target.getStage();
-    if (!stage) return;
-
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-
     const s = stateRef.current;
-    const oldScale = s.scale;
-    const direction = e.evt.deltaY < 0 ? 1 : -1;
-    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE,
-      direction > 0 ? oldScale * ZOOM_SPEED : oldScale / ZOOM_SPEED
-    ));
 
-    const mousePointTo = {
-      x: (pointer.x - s.x) / oldScale,
-      y: (pointer.y - s.y) / oldScale,
-    };
+    // Mac trackpad: ctrlKey = pinch-to-zoom, no ctrlKey = two-finger pan
+    // Mouse: wheel = zoom
+    if (e.evt.ctrlKey) {
+      // Pinch-to-zoom (Mac trackpad) — deltaY is zoom amount
+      const stage = e.target.getStage();
+      if (!stage) return;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
 
-    setState({
-      scale: newScale,
-      x: pointer.x - mousePointTo.x * newScale,
-      y: pointer.y - mousePointTo.y * newScale,
-    });
+      const oldScale = s.scale;
+      // Pinch deltaY is inverted and smaller, so use a gentler factor
+      const zoomFactor = 1 - e.evt.deltaY * 0.01;
+      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, oldScale * zoomFactor));
+
+      const mousePointTo = {
+        x: (pointer.x - s.x) / oldScale,
+        y: (pointer.y - s.y) / oldScale,
+      };
+
+      setState({
+        scale: newScale,
+        x: pointer.x - mousePointTo.x * newScale,
+        y: pointer.y - mousePointTo.y * newScale,
+      });
+    } else if (Math.abs(e.evt.deltaX) > 0 || Math.abs(e.evt.deltaY) > 0) {
+      // Two-finger drag (Mac trackpad) or mousewheel — pan
+      setState({
+        ...s,
+        x: s.x - e.evt.deltaX,
+        y: s.y - e.evt.deltaY,
+      });
+    }
   }, []);
 
   const screenToPage = useCallback((screenX: number, screenY: number) => {
