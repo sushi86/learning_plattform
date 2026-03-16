@@ -32,6 +32,9 @@ export function getShapeBounds(shape: Shape): { x: number; y: number; w: number;
       }
       return { x: shape.x + minX, y: shape.y + minY, w: maxX - minX, h: maxY - minY };
     }
+    case "ai-step":
+    case "ai-correction":
+      return { x: shape.x, y: shape.y, w: 300, h: 80 };
   }
 }
 

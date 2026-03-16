@@ -1,3 +1,5 @@
+import type { AiStepShape, AiCorrectionShape } from "@/lib/ai/types";
+
 /**
  * A4 page dimensions in pixels (at 96 DPI).
  * 210mm x 297mm → 794px x 1123px
@@ -37,7 +39,7 @@ export const COLORS = [
 export const STROKE_WIDTHS = [2, 4, 8] as const;
 
 /** Shape type discriminator */
-export type ShapeType = "draw" | "line" | "text" | "image";
+export type ShapeType = "draw" | "line" | "text" | "image" | "ai-step" | "ai-correction";
 
 interface BaseShape {
   id: string;
@@ -82,7 +84,7 @@ export interface ImageShape extends BaseShape {
   };
 }
 
-export type Shape = DrawShape | LineShape | TextShape | ImageShape;
+export type Shape = DrawShape | LineShape | TextShape | ImageShape | AiStepShape | AiCorrectionShape;
 
 /** Clamp a point to A4 sheet bounds */
 export function clampToSheet(x: number, y: number): { x: number; y: number } {

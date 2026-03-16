@@ -468,6 +468,7 @@ export function WhiteboardCanvas({
             let bx = sel.x, by = sel.y, bw = 100, bh = 50;
             if (sel.type === "image") { bw = sel.props.width; bh = sel.props.height; }
             else if (sel.type === "text") { bw = sel.props.width || 200; bh = sel.props.fontSize * 2; }
+            else if (sel.type === "ai-step" || sel.type === "ai-correction") { bw = 300; bh = 80; }
             else {
               const pts = sel.props.points;
               let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
