@@ -1,3 +1,5 @@
+.stoneforge
+
 # Dependencies
 node_modules/
 
@@ -35,3 +37,4 @@ coverage/
 # Superpowers runtime
 .superpowers/**/.server.*
 .superpowers/**/.server-stopped
+/.stoneforge/.worktrees/
