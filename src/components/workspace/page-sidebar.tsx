@@ -205,7 +205,7 @@ export default function PageSidebar({
   }
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r border-gray-200 bg-gray-50">
+    <aside className="flex h-full w-28 flex-col border-r border-gray-200 bg-gray-50">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
         <div className="flex items-center gap-1">
