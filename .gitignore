@@ -35,6 +35,5 @@ coverage/
 # Stoneforge runtime (DB is in .stoneforge/.gitignore)
 
 # Superpowers runtime
-.superpowers/**/.server.*
-.superpowers/**/.server-stopped
+.superpowers/
 /.stoneforge/.worktrees/
