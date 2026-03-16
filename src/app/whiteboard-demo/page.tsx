@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { BackgroundType } from "@/components/whiteboard";
 
-// Dynamic import to avoid SSR issues with tldraw
+// Dynamic import to avoid SSR issues with Konva
 const WhiteboardCanvas = dynamic(
   () =>
     import("@/components/whiteboard").then((mod) => mod.WhiteboardCanvas),
