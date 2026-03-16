@@ -21,11 +21,17 @@ import { useLine } from "./tools/useLine";
 import { useEraser } from "./tools/useEraser";
 import { useText, type TextEditState } from "./tools/useText";
 import { useSelect } from "./tools/useSelect";
+import { useRectSelect, type AiSelection } from "./tools/useRectSelect";
+import { useLassoSelect } from "./tools/useLassoSelect";
 import { useZoomPan } from "./useZoomPan";
 import { useYjsSync, type ConnectionStatus } from "@/lib/useYjsSync";
 import { useWsToken } from "@/lib/useWsToken";
 import { FileUploadButton } from "./FileUploadButton";
 import { uploadFile } from "./uploadFile";
+import { AiButtons } from "./AiButtons";
+import { AiStepNode, AiCorrectionNode } from "./AiShapes";
+import { AiExplainInput } from "./AiExplainInput";
+import type { AiStepShape, AiCorrectionShape, AiSolveResponse, AiCheckResponse, AiExplainResponse } from "@/lib/ai/types";
 
 /* --- Background mapping --- */
 
@@ -131,6 +137,7 @@ export interface WhiteboardCanvasProps {
   onMount?: (stageRef: Konva.Stage) => void;
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   className?: string;
+  aiEnabled?: boolean;
 }
 
 /* --- Main component --- */
@@ -141,6 +148,7 @@ export function WhiteboardCanvas({
   onMount,
   onConnectionStatusChange,
   className,
+  aiEnabled = false,
 }: WhiteboardCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
@@ -181,6 +189,12 @@ export function WhiteboardCanvas({
   // Drawing preview state
   const [drawPreview, setDrawPreview] = useState<{ points: number[]; x: number; y: number } | null>(null);
   const [linePreview, setLinePreview] = useState<{ from: { x: number; y: number }; to: { x: number; y: number } } | null>(null);
+
+  // AI state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [explainTarget, setExplainTarget] = useState<{ shapeId: string; screenX: number; screenY: number } | null>(null);
+  const [explainLoading, setExplainLoading] = useState(false);
 
   // WebSocket token
   const wsToken = useWsToken();
@@ -258,6 +272,268 @@ export function WhiteboardCanvas({
     onShapeDelete: deleteShape,
     screenToPage: zoomPan.screenToPage,
   });
+
+  const rectSelect = useRectSelect({
+    screenToPage: zoomPan.screenToPage,
+  });
+
+  const lassoSelect = useLassoSelect({
+    screenToPage: zoomPan.screenToPage,
+  });
+
+  // Compute active AI selection based on tool
+  const aiSelection: AiSelection | null =
+    activeTool === "rect-select" ? rectSelect.selection :
+    activeTool === "lasso-select" ? lassoSelect.selection :
+    null;
+
+  // Screenshot capture for AI
+  const captureSelection = useCallback((bounds: { x: number; y: number; width: number; height: number }): string | null => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+
+    // Save current transform
+    const prevScale = { x: stage.scaleX(), y: stage.scaleY() };
+    const prevPos = { x: stage.x(), y: stage.y() };
+
+    // Reset to identity transform
+    stage.scaleX(1);
+    stage.scaleY(1);
+    stage.x(0);
+    stage.y(0);
+
+    const dataUrl = stage.toDataURL({
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      pixelRatio: 2,
+    });
+
+    // Restore transform
+    stage.scaleX(prevScale.x);
+    stage.scaleY(prevScale.y);
+    stage.x(prevPos.x);
+    stage.y(prevPos.y);
+
+    // Strip data URL prefix to get base64
+    return dataUrl.replace(/^data:image\/\w+;base64,/, "");
+  }, []);
+
+  // Handle AI Solve
+  const handleAiSolve = useCallback(async () => {
+    if (!aiSelection || !pageId) return;
+    const image = captureSelection(aiSelection.bounds);
+    if (!image) return;
+
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const res = await fetch("/api/ai/solve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, pageId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "KI-Fehler");
+      }
+
+      const result: AiSolveResponse = await res.json();
+      const groupId = createShapeId();
+      const startY = aiSelection.bounds.y + aiSelection.bounds.height + 20;
+
+      result.steps.forEach((step, i) => {
+        addShape({
+          id: createShapeId(),
+          type: "ai-step",
+          x: aiSelection.bounds.x,
+          y: startY + i * 60,
+          color: "#7c3aed",
+          source: "ai",
+          props: {
+            text: step.text,
+            explanation: step.explanation,
+            stepIndex: i,
+            groupId,
+          },
+        } as AiStepShape);
+      });
+
+      // Clear selection
+      if (activeTool === "rect-select") rectSelect.clearSelection();
+      else if (activeTool === "lasso-select") lassoSelect.clearSelection();
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "KI-Fehler");
+      setTimeout(() => setAiError(null), 5000);
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiSelection, pageId, captureSelection, addShape, activeTool, rectSelect, lassoSelect]);
+
+  // Handle AI Check
+  const handleAiCheck = useCallback(async () => {
+    if (!aiSelection || !pageId) return;
+    const image = captureSelection(aiSelection.bounds);
+    if (!image) return;
+
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const res = await fetch("/api/ai/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, pageId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "KI-Fehler");
+      }
+
+      const result: AiCheckResponse = await res.json();
+      const groupId = createShapeId();
+      const startY = aiSelection.bounds.y + aiSelection.bounds.height + 20;
+
+      result.steps.forEach((step, i) => {
+        addShape({
+          id: createShapeId(),
+          type: "ai-correction",
+          x: aiSelection.bounds.x,
+          y: startY + i * 80,
+          color: step.isCorrect ? "#16a34a" : "#dc2626",
+          source: "ai",
+          props: {
+            text: step.studentStep,
+            isCorrect: step.isCorrect,
+            correction: step.correction,
+            rule: step.rule,
+            hint: i === result.steps.length - 1 ? result.hint : undefined,
+            stepIndex: i,
+            groupId,
+          },
+        } as AiCorrectionShape);
+      });
+
+      // Clear selection
+      if (activeTool === "rect-select") rectSelect.clearSelection();
+      else if (activeTool === "lasso-select") lassoSelect.clearSelection();
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "KI-Fehler");
+      setTimeout(() => setAiError(null), 5000);
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiSelection, pageId, captureSelection, addShape, activeTool, rectSelect, lassoSelect]);
+
+  // Handle AI selection cancel
+  const handleAiCancel = useCallback(() => {
+    if (activeTool === "rect-select") rectSelect.clearSelection();
+    else if (activeTool === "lasso-select") lassoSelect.clearSelection();
+  }, [activeTool, rectSelect, lassoSelect]);
+
+  // Handle clicking an AI step shape for follow-up
+  const handleAiStepClick = useCallback((shapeId: string) => {
+    if (activeTool !== "select") return;
+    const shape = shapes.get(shapeId);
+    if (!shape || shape.type !== "ai-step") return;
+
+    const screenX = shape.x * zoomPan.state.scale + zoomPan.state.x;
+    const screenY = (shape.y + 50) * zoomPan.state.scale + zoomPan.state.y;
+    setExplainTarget({ shapeId, screenX, screenY });
+  }, [activeTool, shapes, zoomPan.state]);
+
+  // Handle explain submission
+  const handleExplainSubmit = useCallback(async (question: string) => {
+    if (!explainTarget || !pageId) return;
+    const shape = shapes.get(explainTarget.shapeId) as AiStepShape | undefined;
+    if (!shape) return;
+
+    setExplainLoading(true);
+
+    // Gather all steps in same group as context
+    const allSteps = [...shapes.values()]
+      .filter((s): s is AiStepShape => s.type === "ai-step" && s.props.groupId === shape.props.groupId)
+      .sort((a, b) => a.props.stepIndex - b.props.stepIndex);
+
+    const previousSteps = allSteps
+      .filter((s) => s.props.stepIndex <= shape.props.stepIndex)
+      .map((s) => ({ text: s.props.text, explanation: s.props.explanation }));
+
+    // Capture a screenshot of the area around this shape
+    const image = captureSelection({
+      x: Math.max(0, shape.x - 50),
+      y: Math.max(0, shape.y - 50),
+      width: 500,
+      height: 200,
+    });
+
+    try {
+      const res = await fetch("/api/ai/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: image || "",
+          previousSteps,
+          step: shape.props.text,
+          question,
+          pageId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "KI-Fehler");
+      }
+
+      const result: AiExplainResponse = await res.json();
+
+      // Add explanation as a new AI step below the clicked shape
+      addShape({
+        id: createShapeId(),
+        type: "ai-step",
+        x: shape.x + 20,
+        y: shape.y + 60,
+        color: "#7c3aed",
+        source: "ai",
+        props: {
+          text: `Frage: ${question}`,
+          explanation: result.explanation,
+          stepIndex: shape.props.stepIndex + 100, // offset to not collide
+          groupId: shape.props.groupId,
+        },
+      } as AiStepShape);
+
+      if (result.additionalSteps) {
+        result.additionalSteps.forEach((step, i) => {
+          addShape({
+            id: createShapeId(),
+            type: "ai-step",
+            x: shape.x + 20,
+            y: shape.y + 120 + i * 60,
+            color: "#7c3aed",
+            source: "ai",
+            props: {
+              text: step.text,
+              explanation: step.explanation,
+              stepIndex: shape.props.stepIndex + 101 + i,
+              groupId: shape.props.groupId,
+            },
+          } as AiStepShape);
+        });
+      }
+
+      setExplainTarget(null);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "KI-Fehler");
+      setTimeout(() => setAiError(null), 5000);
+    } finally {
+      setExplainLoading(false);
+    }
+  }, [explainTarget, pageId, shapes, captureSelection, addShape]);
 
   // Paste image from clipboard (Cmd+V)
   useEffect(() => {
@@ -364,8 +640,10 @@ export function WhiteboardCanvas({
       case "eraser": eraserTool.handlePointerDown(e); break;
       case "text": textTool.handlePointerDown(e); break;
       case "select": selectTool.handlePointerDown(e); break;
+      case "rect-select": rectSelect.handlePointerDown(e); break;
+      case "lasso-select": lassoSelect.handlePointerDown(e); break;
     }
-  }, [activeTool, zoomPan, drawTool, lineTool, eraserTool, textTool, selectTool]);
+  }, [activeTool, zoomPan, drawTool, lineTool, eraserTool, textTool, selectTool, rectSelect, lassoSelect]);
 
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     if (zoomPan.isPanningRef.current) {
@@ -376,8 +654,10 @@ export function WhiteboardCanvas({
       case "draw": drawTool.handlePointerMove(e); break;
       case "line": lineTool.handlePointerMove(e); break;
       case "select": selectTool.handlePointerMove(e); break;
+      case "rect-select": rectSelect.handlePointerMove(e); break;
+      case "lasso-select": lassoSelect.handlePointerMove(e); break;
     }
-  }, [activeTool, zoomPan, drawTool, lineTool, selectTool]);
+  }, [activeTool, zoomPan, drawTool, lineTool, selectTool, rectSelect, lassoSelect]);
 
   const handlePointerUp = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     if (zoomPan.isPanningRef.current) {
@@ -388,8 +668,10 @@ export function WhiteboardCanvas({
       case "draw": drawTool.handlePointerUp(); break;
       case "line": lineTool.handlePointerUp(e); break;
       case "select": selectTool.handlePointerUp(); break;
+      case "rect-select": rectSelect.handlePointerUp(); break;
+      case "lasso-select": lassoSelect.handlePointerUp(); break;
     }
-  }, [activeTool, zoomPan, drawTool, lineTool, selectTool]);
+  }, [activeTool, zoomPan, drawTool, lineTool, selectTool, rectSelect, lassoSelect]);
 
   // Background component
   const BackgroundComponent = BACKGROUND_COMPONENTS[backgroundType];
@@ -399,7 +681,18 @@ export function WhiteboardCanvas({
     : activeTool === "eraser" ? "pointer"
     : activeTool === "text" ? "text"
     : activeTool === "line" ? "crosshair"
+    : activeTool === "rect-select" || activeTool === "lasso-select" ? "crosshair"
     : "default";
+
+  // Compute the rect-select preview rectangle during drawing
+  const rectPreview = activeTool === "rect-select" && rectSelect.drawing && rectSelect.startRef.current && rectSelect.currentRef.current
+    ? {
+        x: Math.min(rectSelect.startRef.current.x, rectSelect.currentRef.current.x),
+        y: Math.min(rectSelect.startRef.current.y, rectSelect.currentRef.current.y),
+        width: Math.abs(rectSelect.currentRef.current.x - rectSelect.startRef.current.x),
+        height: Math.abs(rectSelect.currentRef.current.y - rectSelect.startRef.current.y),
+      }
+    : null;
 
   return (
     <div
@@ -457,6 +750,16 @@ export function WhiteboardCanvas({
                 );
               case "image":
                 return <ShapeImage key={shape.id} shape={shape} />;
+              case "ai-step":
+                return (
+                  <AiStepNode
+                    key={shape.id}
+                    shape={shape}
+                    onClick={() => handleAiStepClick(shape.id)}
+                  />
+                );
+              case "ai-correction":
+                return <AiCorrectionNode key={shape.id} shape={shape} />;
               default:
                 return null;
             }
@@ -526,6 +829,57 @@ export function WhiteboardCanvas({
               dash={[8, 4]}
             />
           )}
+          {/* Rect-select preview during drawing */}
+          {rectPreview && (
+            <Rect
+              x={rectPreview.x}
+              y={rectPreview.y}
+              width={rectPreview.width}
+              height={rectPreview.height}
+              stroke="#7c3aed"
+              strokeWidth={2}
+              dash={[8, 4]}
+              fill="rgba(124, 58, 237, 0.05)"
+              listening={false}
+            />
+          )}
+          {/* Lasso-select preview during drawing */}
+          {activeTool === "lasso-select" && lassoSelect.drawing && lassoSelect.pointsRef.current.length >= 4 && (
+            <Line
+              points={lassoSelect.pointsRef.current}
+              stroke="#7c3aed"
+              strokeWidth={2}
+              dash={[8, 4]}
+              closed={false}
+              listening={false}
+            />
+          )}
+          {/* AI selection overlay (after completed selection) */}
+          {aiSelection && !aiLoading && (
+            activeTool === "rect-select" ? (
+              <Rect
+                x={aiSelection.bounds.x}
+                y={aiSelection.bounds.y}
+                width={aiSelection.bounds.width}
+                height={aiSelection.bounds.height}
+                stroke="#7c3aed"
+                strokeWidth={2}
+                dash={[8, 4]}
+                fill="rgba(124, 58, 237, 0.08)"
+                listening={false}
+              />
+            ) : activeTool === "lasso-select" ? (
+              <Line
+                points={aiSelection.points}
+                stroke="#7c3aed"
+                strokeWidth={2}
+                dash={[8, 4]}
+                closed
+                fill="rgba(124, 58, 237, 0.08)"
+                listening={false}
+              />
+            ) : null
+          )}
         </Layer>
       </Stage>
 
@@ -554,6 +908,39 @@ export function WhiteboardCanvas({
             transformOrigin: "top left",
           }}
         />
+      )}
+
+      {/* AI action buttons */}
+      {aiSelection && (
+        <AiButtons
+          selection={aiSelection}
+          aiEnabled={aiEnabled}
+          loading={aiLoading}
+          onSolve={handleAiSolve}
+          onCheck={handleAiCheck}
+          onCancel={handleAiCancel}
+          scale={zoomPan.state.scale}
+          stageX={zoomPan.state.x}
+          stageY={zoomPan.state.y}
+        />
+      )}
+
+      {/* AI explain input */}
+      {explainTarget && (
+        <AiExplainInput
+          screenX={explainTarget.screenX}
+          screenY={explainTarget.screenY}
+          loading={explainLoading}
+          onSubmit={handleExplainSubmit}
+          onCancel={() => setExplainTarget(null)}
+        />
+      )}
+
+      {/* AI error toast */}
+      {aiError && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-red-100 border border-red-300 px-4 py-2 text-sm text-red-700 shadow-lg">
+          {aiError}
+        </div>
       )}
 
       {/* Toolbar */}
