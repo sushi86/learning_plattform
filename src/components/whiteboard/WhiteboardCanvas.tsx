@@ -140,7 +140,6 @@ export function WhiteboardCanvas({
   onConnectionStatusChange,
   className,
 }: WhiteboardCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
 
@@ -151,6 +150,9 @@ export function WhiteboardCanvas({
     pageWidth: A4_WIDTH_PX,
     pageHeight: A4_HEIGHT_PX,
   });
+
+  // Use the containerRef from zoomPan so screenToPage knows the container offset
+  const containerRef = zoomPan.containerRef;
 
   // Container resize observer
   useEffect(() => {
