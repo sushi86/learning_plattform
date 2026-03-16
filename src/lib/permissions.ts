@@ -159,3 +159,9 @@ export async function canManageSettings(
 ): Promise<boolean> {
   return isWorkspaceOwner(userId, workspaceId);
 }
+
+/* ---- AI access ---- */
+
+export function canUseAi(user: { aiEnabled: boolean }): boolean {
+  return user.aiEnabled === true;
+}
