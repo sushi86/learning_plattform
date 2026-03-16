@@ -101,8 +101,8 @@ async function persistCanvasSnapshot(
   doc: Y.Doc,
 ): Promise<void> {
   try {
-    // Extract the tldraw records from the Y.Map and build a snapshot
-    const yRecords = doc.getMap("tldraw_records");
+    // Extract the canvas shapes from the Y.Map and build a snapshot
+    const yRecords = doc.getMap("shapes");
     const records: Record<string, unknown> = {};
     yRecords.forEach((value, key) => {
       records[key] = value;
