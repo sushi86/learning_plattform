@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type Konva from "konva";
 import { WhiteboardCanvas } from "@/components/whiteboard";
 import type { BackgroundType } from "@/components/whiteboard/types";
+import { A4_WIDTH_PX, A4_HEIGHT_PX } from "@/components/whiteboard/types";
 import { exportWorkspaceToPdf } from "@/lib/pdf-export";
 import type { ConnectionStatus } from "@/lib/useYjsSync";
 import PageSidebar from "./page-sidebar";
@@ -48,13 +49,20 @@ export default function WorkspaceContent({
   const activePage = pages.find((p) => p.id === activePageId) || null;
 
   // Generate thumbnail for active page periodically
+  // Renders only the A4 area (0,0)→(794,1123) regardless of current zoom/pan
   useEffect(() => {
     if (!activePageId || !stageRef.current) return;
     const generateThumbnail = () => {
       const stage = stageRef.current;
       if (!stage) return;
       try {
-        const dataUrl = stage.toDataURL({ pixelRatio: 0.15 });
+        const dataUrl = stage.toDataURL({
+          x: 0,
+          y: 0,
+          width: A4_WIDTH_PX,
+          height: A4_HEIGHT_PX,
+          pixelRatio: 0.15,
+        });
         setThumbnails((prev) => {
           const next = new Map(prev);
           next.set(activePageId, dataUrl);
