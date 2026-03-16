@@ -13,16 +13,16 @@ interface UseRectSelectOptions {
 export function useRectSelect({ screenToPage }: UseRectSelectOptions) {
   const [selection, setSelection] = useState<AiSelection | null>(null);
   const startRef = useRef<{ x: number; y: number } | null>(null);
-  const currentRef = useRef<{ x: number; y: number } | null>(null);
   const [drawing, setDrawing] = useState(false);
+  const [preview, setPreview] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   const handlePointerDown = useCallback(
     (e: Konva.KonvaEventObject<PointerEvent>) => {
       const pos = screenToPage(e.evt.clientX, e.evt.clientY);
       startRef.current = pos;
-      currentRef.current = pos;
       setDrawing(true);
       setSelection(null);
+      setPreview({ x: pos.x, y: pos.y, width: 0, height: 0 });
     },
     [screenToPage],
   );
@@ -30,19 +30,25 @@ export function useRectSelect({ screenToPage }: UseRectSelectOptions) {
   const handlePointerMove = useCallback(
     (e: Konva.KonvaEventObject<PointerEvent>) => {
       if (!startRef.current) return;
-      currentRef.current = screenToPage(e.evt.clientX, e.evt.clientY);
+      const cur = screenToPage(e.evt.clientX, e.evt.clientY);
+      const s = startRef.current;
+      setPreview({
+        x: Math.min(s.x, cur.x),
+        y: Math.min(s.y, cur.y),
+        width: Math.abs(cur.x - s.x),
+        height: Math.abs(cur.y - s.y),
+      });
     },
     [screenToPage],
   );
 
   const handlePointerUp = useCallback(() => {
-    if (!startRef.current || !currentRef.current) return;
-    const s = startRef.current;
-    const c = currentRef.current;
-    const x = Math.min(s.x, c.x);
-    const y = Math.min(s.y, c.y);
-    const width = Math.abs(c.x - s.x);
-    const height = Math.abs(c.y - s.y);
+    if (!startRef.current || !preview) {
+      setDrawing(false);
+      setPreview(null);
+      return;
+    }
+    const { x, y, width, height } = preview;
     if (width > 10 && height > 10) {
       setSelection({
         points: [x, y, x + width, y, x + width, y + height, x, y + height],
@@ -50,9 +56,9 @@ export function useRectSelect({ screenToPage }: UseRectSelectOptions) {
       });
     }
     startRef.current = null;
-    currentRef.current = null;
     setDrawing(false);
-  }, []);
+    setPreview(null);
+  }, [preview]);
 
   const clearSelection = useCallback(() => {
     setSelection(null);
@@ -61,8 +67,7 @@ export function useRectSelect({ screenToPage }: UseRectSelectOptions) {
   return {
     selection,
     drawing,
-    startRef,
-    currentRef,
+    preview,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,

@@ -10,6 +10,7 @@ export function useLassoSelect({ screenToPage }: UseLassoSelectOptions) {
   const [selection, setSelection] = useState<AiSelection | null>(null);
   const pointsRef = useRef<number[]>([]);
   const [drawing, setDrawing] = useState(false);
+  const [previewPoints, setPreviewPoints] = useState<number[]>([]);
 
   const handlePointerDown = useCallback(
     (e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -17,6 +18,7 @@ export function useLassoSelect({ screenToPage }: UseLassoSelectOptions) {
       pointsRef.current = [pos.x, pos.y];
       setDrawing(true);
       setSelection(null);
+      setPreviewPoints([pos.x, pos.y]);
     },
     [screenToPage],
   );
@@ -26,6 +28,7 @@ export function useLassoSelect({ screenToPage }: UseLassoSelectOptions) {
       if (!drawing) return;
       const pos = screenToPage(e.evt.clientX, e.evt.clientY);
       pointsRef.current.push(pos.x, pos.y);
+      setPreviewPoints([...pointsRef.current]);
     },
     [screenToPage, drawing],
   );
@@ -34,6 +37,7 @@ export function useLassoSelect({ screenToPage }: UseLassoSelectOptions) {
     if (pointsRef.current.length < 6) {
       pointsRef.current = [];
       setDrawing(false);
+      setPreviewPoints([]);
       return;
     }
     const pts = pointsRef.current;
@@ -57,6 +61,7 @@ export function useLassoSelect({ screenToPage }: UseLassoSelectOptions) {
     }
     pointsRef.current = [];
     setDrawing(false);
+    setPreviewPoints([]);
   }, [drawing]);
 
   const clearSelection = useCallback(() => {
@@ -66,7 +71,7 @@ export function useLassoSelect({ screenToPage }: UseLassoSelectOptions) {
   return {
     selection,
     drawing,
-    pointsRef,
+    previewPoints,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,

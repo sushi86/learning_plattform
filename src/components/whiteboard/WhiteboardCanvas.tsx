@@ -684,15 +684,9 @@ export function WhiteboardCanvas({
     : activeTool === "rect-select" || activeTool === "lasso-select" ? "crosshair"
     : "default";
 
-  // Compute the rect-select preview rectangle during drawing
-  const rectPreview = activeTool === "rect-select" && rectSelect.drawing && rectSelect.startRef.current && rectSelect.currentRef.current
-    ? {
-        x: Math.min(rectSelect.startRef.current.x, rectSelect.currentRef.current.x),
-        y: Math.min(rectSelect.startRef.current.y, rectSelect.currentRef.current.y),
-        width: Math.abs(rectSelect.currentRef.current.x - rectSelect.startRef.current.x),
-        height: Math.abs(rectSelect.currentRef.current.y - rectSelect.startRef.current.y),
-      }
-    : null;
+  // Live preview from state (triggers re-renders)
+  const rectPreview = activeTool === "rect-select" && rectSelect.drawing ? rectSelect.preview : null;
+  const lassoPreview = activeTool === "lasso-select" && lassoSelect.drawing ? lassoSelect.previewPoints : null;
 
   return (
     <div
@@ -844,9 +838,9 @@ export function WhiteboardCanvas({
             />
           )}
           {/* Lasso-select preview during drawing */}
-          {activeTool === "lasso-select" && lassoSelect.drawing && lassoSelect.pointsRef.current.length >= 4 && (
+          {lassoPreview && lassoPreview.length >= 4 && (
             <Line
-              points={lassoSelect.pointsRef.current}
+              points={lassoPreview}
               stroke="#7c3aed"
               strokeWidth={2}
               dash={[8, 4]}
