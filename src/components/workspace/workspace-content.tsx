@@ -392,6 +392,7 @@ export default function WorkspaceContent({
               backgroundType={activePage.backgroundType}
               onMount={handleStageMount}
               onConnectionStatusChange={setConnectionStatus}
+              aiEnabled={session?.user?.aiEnabled ?? false}
               className="h-full w-full"
             />
           ) : (
