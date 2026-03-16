@@ -6,6 +6,7 @@ import "@/lib/auth.types";
  * Safe to import in Edge runtime (middleware).
  */
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [], // Providers added in auth.ts (server-side only)
   session: {
     strategy: "jwt",
