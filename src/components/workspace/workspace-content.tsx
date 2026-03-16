@@ -5,8 +5,10 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { WhiteboardCanvas } from "@/components/whiteboard";
 import type { BackgroundType } from "@/components/whiteboard/types";
+import type { ConnectionStatus } from "@/lib/useYjsSync";
 import PageSidebar from "./page-sidebar";
 import NewPageDialog from "./new-page-dialog";
+import ConnectionStatusIndicator from "./connection-status";
 import type { PageItem, WorkspaceInfo } from "./types";
 
 interface WorkspaceContentProps {
@@ -24,6 +26,8 @@ export default function WorkspaceContent({
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNewPageDialog, setShowNewPageDialog] = useState(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("offline");
 
   const isTeacher = session?.user?.role === "TEACHER";
   const activePage = pages.find((p) => p.id === activePageId) || null;
@@ -181,11 +185,8 @@ export default function WorkspaceContent({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Online status placeholder */}
-          <div className="flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
-            <span className="text-xs text-gray-500">Online</span>
-          </div>
+          {/* Connection status */}
+          <ConnectionStatusIndicator status={connectionStatus} />
 
           {/* PDF export placeholder */}
           <button
@@ -254,8 +255,9 @@ export default function WorkspaceContent({
           {activePage ? (
             <WhiteboardCanvas
               key={activePage.id}
-              backgroundType={activePage.backgroundType}
               pageId={activePage.id}
+              backgroundType={activePage.backgroundType}
+              onConnectionStatusChange={setConnectionStatus}
               className="h-full w-full"
             />
           ) : (

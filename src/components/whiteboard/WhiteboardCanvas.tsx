@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Tldraw,
   DefaultToolbar,
@@ -25,6 +25,8 @@ import {
   LinedBackground,
   CoordinateBackground,
 } from "./backgrounds";
+import { useYjsSync, type ConnectionStatus } from "@/lib/useYjsSync";
+import { useWsToken } from "@/lib/useWsToken";
 import { FileUploadButton } from "./FileUploadButton";
 
 /* ---------- Background mapping ---------- */
@@ -72,10 +74,12 @@ function CustomToolbarContent({ pageId }: { pageId?: string }) {
 export interface WhiteboardCanvasProps {
   /** Background pattern for the canvas page */
   backgroundType?: BackgroundType;
-  /** Page ID for file upload association */
+  /** Page ID for real-time sync and file upload association */
   pageId?: string;
   /** Callback when the editor instance is created */
   onMount?: (editor: Editor) => void;
+  /** Callback when connection status changes */
+  onConnectionStatusChange?: (status: ConnectionStatus) => void;
   /** Additional CSS class for the container */
   className?: string;
 }
@@ -86,9 +90,24 @@ export function WhiteboardCanvas({
   backgroundType = "BLANK",
   pageId,
   onMount,
+  onConnectionStatusChange,
   className,
 }: WhiteboardCanvasProps) {
   const BackgroundComponent = BACKGROUND_COMPONENTS[backgroundType];
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const wsToken = useWsToken();
+
+  // Y.js sync hook — only active when pageId and token are available
+  const { connectionStatus } = useYjsSync({
+    pageId: pageId || "",
+    token: wsToken,
+    editor,
+  });
+
+  // Notify parent of connection status changes
+  useEffect(() => {
+    onConnectionStatusChange?.(connectionStatus);
+  }, [connectionStatus, onConnectionStatusChange]);
 
   const components = useMemo<TLComponents>(
     () => ({
@@ -112,7 +131,7 @@ export function WhiteboardCanvas({
     (editor: Editor) => {
       // Center the camera on the A4 page area
       editor.zoomToFit();
-
+      setEditor(editor);
       onMount?.(editor);
     },
     [onMount],
