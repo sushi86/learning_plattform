@@ -4,6 +4,7 @@ import { useRef, useCallback, useState } from "react";
 import { useToast } from "@/components/ui/toast";
 import type { ImageShape } from "./types";
 import { createShapeId } from "./types";
+import { uploadFile } from "./uploadFile";
 
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -12,22 +13,6 @@ const MAX_PDF_PAGES = 20;
 interface FileUploadButtonProps {
   pageId: string;
   onAddImage: (shape: ImageShape) => void;
-}
-
-async function uploadFile(file: File | Blob, pageId: string, filename?: string): Promise<{ id: string; url: string; mimeType: string }> {
-  const formData = new FormData();
-  if (filename && file instanceof Blob && !(file instanceof File)) {
-    formData.append("file", file, filename);
-  } else {
-    formData.append("file", file);
-  }
-  formData.append("pageId", pageId);
-  const res = await fetch("/api/upload", { method: "POST", body: formData });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || "Upload fehlgeschlagen");
-  }
-  return res.json();
 }
 
 async function renderPdfPages(file: File): Promise<Blob[]> {

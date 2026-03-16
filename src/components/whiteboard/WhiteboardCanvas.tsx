@@ -12,6 +12,7 @@ import {
   A4_HEIGHT_PX,
   COLORS,
   STROKE_WIDTHS,
+  createShapeId,
 } from "./types";
 import { KonvaBlank, KonvaGrid, KonvaLined, KonvaCoordinate } from "./backgrounds";
 import { Toolbar } from "./Toolbar";
@@ -24,6 +25,7 @@ import { useZoomPan } from "./useZoomPan";
 import { useYjsSync, type ConnectionStatus } from "@/lib/useYjsSync";
 import { useWsToken } from "@/lib/useWsToken";
 import { FileUploadButton } from "./FileUploadButton";
+import { uploadFile } from "./uploadFile";
 
 /* --- Background mapping --- */
 
@@ -256,6 +258,56 @@ export function WhiteboardCanvas({
     onShapeDelete: deleteShape,
     screenToPage: zoomPan.screenToPage,
   });
+
+  // Paste image from clipboard (Cmd+V)
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      if (!pageId) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          if (!blob) continue;
+
+          try {
+            const result = await uploadFile(blob, pageId, `paste-${Date.now()}.png`);
+
+            // Load image to get dimensions
+            const img = new window.Image();
+            img.crossOrigin = "anonymous";
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => reject();
+              img.src = result.url;
+            });
+
+            const maxWidth = 600;
+            const scale = Math.min(1, maxWidth / img.naturalWidth);
+            const w = img.naturalWidth * scale;
+            const h = img.naturalHeight * scale;
+
+            addShape({
+              id: createShapeId(),
+              type: "image",
+              x: 100,
+              y: 100,
+              color: "#000000",
+              props: { src: result.url, width: w, height: h },
+            });
+          } catch {
+            // Upload failed silently
+          }
+          return;
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [pageId, addShape]);
 
   // Keyboard shortcuts (undo/redo, space for pan)
   useEffect(() => {
