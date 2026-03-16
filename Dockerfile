@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npm ci --omit=dev
 
 # ── Stage 2: Build the application ────────────────────────────────
