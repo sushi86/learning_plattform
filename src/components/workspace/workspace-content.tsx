@@ -56,6 +56,16 @@ export default function WorkspaceContent({
       const stage = stageRef.current;
       if (!stage) return;
       try {
+        // Save current transform
+        const prevScale = { x: stage.scaleX(), y: stage.scaleY() };
+        const prevPos = { x: stage.x(), y: stage.y() };
+
+        // Reset to identity transform so we capture the raw A4 area
+        stage.scaleX(1);
+        stage.scaleY(1);
+        stage.x(0);
+        stage.y(0);
+
         const dataUrl = stage.toDataURL({
           x: 0,
           y: 0,
@@ -63,6 +73,13 @@ export default function WorkspaceContent({
           height: A4_HEIGHT_PX,
           pixelRatio: 0.15,
         });
+
+        // Restore transform
+        stage.scaleX(prevScale.x);
+        stage.scaleY(prevScale.y);
+        stage.x(prevPos.x);
+        stage.y(prevPos.y);
+
         setThumbnails((prev) => {
           const next = new Map(prev);
           next.set(activePageId, dataUrl);
@@ -210,14 +227,27 @@ export default function WorkspaceContent({
         getStageImage: async () => {
           const stage = stageRef.current;
           if (!stage) return null;
-          // Export only the A4 area at high DPI, ignoring current zoom/pan
-          return stage.toDataURL({
+          // Temporarily reset transform to capture raw A4 area
+          const prevScale = { x: stage.scaleX(), y: stage.scaleY() };
+          const prevPos = { x: stage.x(), y: stage.y() };
+          stage.scaleX(1);
+          stage.scaleY(1);
+          stage.x(0);
+          stage.y(0);
+
+          const dataUrl = stage.toDataURL({
             x: 0,
             y: 0,
             width: A4_WIDTH_PX,
             height: A4_HEIGHT_PX,
             pixelRatio: 3,
           });
+
+          stage.scaleX(prevScale.x);
+          stage.scaleY(prevScale.y);
+          stage.x(prevPos.x);
+          stage.y(prevPos.y);
+          return dataUrl;
         },
         onProgress: (current, total) => {
           setPdfProgress({ current, total });
