@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import type { Editor } from "tldraw";
 import { WhiteboardCanvas } from "@/components/whiteboard";
 import type { BackgroundType } from "@/components/whiteboard/types";
+import { exportWorkspaceToPdf } from "@/lib/pdf-export";
 import type { ConnectionStatus } from "@/lib/useYjsSync";
 import PageSidebar from "./page-sidebar";
 import NewPageDialog from "./new-page-dialog";
+import PdfExportDialog from "./pdf-export-dialog";
 import ConnectionStatusIndicator from "./connection-status";
 import type { PageItem, WorkspaceInfo } from "./types";
 
@@ -28,6 +31,12 @@ export default function WorkspaceContent({
   const [showNewPageDialog, setShowNewPageDialog] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("offline");
+
+  // PDF export state
+  const editorRef = useRef<Editor | null>(null);
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const isTeacher = session?.user?.role === "TEACHER";
   const activePage = pages.find((p) => p.id === activePageId) || null;
@@ -144,6 +153,57 @@ export default function WorkspaceContent({
     [workspaceId, fetchPages],
   );
 
+  // Handle editor mount — store ref for PDF export
+  const handleEditorMount = useCallback((editor: Editor) => {
+    editorRef.current = editor;
+  }, []);
+
+  // Handle PDF export
+  const handlePdfExport = useCallback(async () => {
+    if (pages.length === 0 || pdfExporting) return;
+
+    setPdfExporting(true);
+    setPdfProgress({ current: 0, total: pages.length });
+    setPdfError(null);
+
+    try {
+      await exportWorkspaceToPdf({
+        pages,
+        workspaceName: workspace?.name || "Workspace",
+        activePageId,
+        getEditorSvg: async () => {
+          const editor = editorRef.current;
+          if (!editor) return null;
+
+          const shapeIds = editor.getCurrentPageShapeIds();
+          if (shapeIds.size === 0) return null;
+
+          const result = await editor.getSvgString([...shapeIds]);
+          return result ?? null;
+        },
+        onProgress: (current, total) => {
+          setPdfProgress({ current, total });
+        },
+      });
+
+      // Keep dialog open briefly to show completion
+      setTimeout(() => {
+        setPdfExporting(false);
+        setPdfProgress({ current: 0, total: 0 });
+      }, 1500);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unbekannter Fehler beim Export.";
+      setPdfError(message);
+    }
+  }, [pages, workspace?.name, activePageId, pdfExporting]);
+
+  const handlePdfDialogClose = useCallback(() => {
+    setPdfExporting(false);
+    setPdfProgress({ current: 0, total: 0 });
+    setPdfError(null);
+  }, []);
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -188,11 +248,12 @@ export default function WorkspaceContent({
           {/* Connection status */}
           <ConnectionStatusIndicator status={connectionStatus} />
 
-          {/* PDF export placeholder */}
+          {/* PDF export */}
           <button
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50"
-            title="PDF Export (coming soon)"
-            disabled
+            onClick={handlePdfExport}
+            disabled={pages.length === 0 || pdfExporting}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Als PDF exportieren"
           >
             <svg
               className="h-4 w-4"
@@ -207,6 +268,7 @@ export default function WorkspaceContent({
                 d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
               />
             </svg>
+            <span className="hidden sm:inline">PDF</span>
           </button>
 
           {/* Settings placeholder */}
@@ -257,6 +319,7 @@ export default function WorkspaceContent({
               key={activePage.id}
               pageId={activePage.id}
               backgroundType={activePage.backgroundType}
+              onMount={handleEditorMount}
               onConnectionStatusChange={setConnectionStatus}
               className="h-full w-full"
             />
@@ -284,6 +347,15 @@ export default function WorkspaceContent({
         onClose={() => setShowNewPageDialog(false)}
         onCreated={handlePageCreated}
         workspaceId={workspaceId}
+      />
+
+      {/* PDF export progress dialog */}
+      <PdfExportDialog
+        open={pdfExporting}
+        currentPage={pdfProgress.current}
+        totalPages={pdfProgress.total}
+        error={pdfError}
+        onClose={handlePdfDialogClose}
       />
     </div>
   );
