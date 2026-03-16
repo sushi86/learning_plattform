@@ -11,6 +11,10 @@ interface PageSidebarProps {
   onDeletePage: (pageId: string) => void;
   onReorder: (pages: { id: string; sortOrder: number }[]) => void;
   isTeacher: boolean;
+  /** Map of pageId → thumbnail data URL, updated by the canvas */
+  thumbnails?: Map<string, string>;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const BACKGROUND_PREVIEWS: Record<string, React.ReactNode> = {
@@ -117,6 +121,9 @@ export default function PageSidebar({
   onDeletePage,
   onReorder,
   isTeacher,
+  thumbnails,
+  collapsed = false,
+  onToggleCollapse,
 }: PageSidebarProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
@@ -181,13 +188,40 @@ export default function PageSidebar({
     dragCounter.current = 0;
   }, []);
 
+  if (collapsed) {
+    return (
+      <aside className="flex h-full w-10 flex-col border-r border-gray-200 bg-gray-50">
+        <button
+          onClick={onToggleCollapse}
+          className="flex items-center justify-center p-2 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+          title="Seitenleiste öffnen"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside className="flex h-full w-56 flex-col border-r border-gray-200 bg-gray-50">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-          Seiten
-        </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onToggleCollapse}
+            className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
+            title="Seitenleiste minimieren"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            Seiten
+          </span>
+        </div>
         <button
           onClick={onAddPage}
           className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
@@ -248,8 +282,17 @@ export default function PageSidebar({
           >
             {/* Miniature preview */}
             <div className="mb-1 aspect-[3/4] w-full overflow-hidden rounded border border-gray-200">
-              {BACKGROUND_PREVIEWS[page.backgroundType] ||
-                BACKGROUND_PREVIEWS.BLANK}
+              {thumbnails?.get(page.id) ? (
+                <img
+                  src={thumbnails.get(page.id)}
+                  alt={page.title || `Seite ${index + 1}`}
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                />
+              ) : (
+                BACKGROUND_PREVIEWS[page.backgroundType] ||
+                BACKGROUND_PREVIEWS.BLANK
+              )}
             </div>
 
             {/* Page label */}

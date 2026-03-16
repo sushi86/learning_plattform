@@ -40,8 +40,35 @@ export default function WorkspaceContent({
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
   const [pdfError, setPdfError] = useState<string | null>(null);
 
+  // Sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [thumbnails, setThumbnails] = useState<Map<string, string>>(new Map());
+
   const isTeacher = session?.user?.role === "TEACHER";
   const activePage = pages.find((p) => p.id === activePageId) || null;
+
+  // Generate thumbnail for active page periodically
+  useEffect(() => {
+    if (!activePageId || !stageRef.current) return;
+    const generateThumbnail = () => {
+      const stage = stageRef.current;
+      if (!stage) return;
+      try {
+        const dataUrl = stage.toDataURL({ pixelRatio: 0.15 });
+        setThumbnails((prev) => {
+          const next = new Map(prev);
+          next.set(activePageId, dataUrl);
+          return next;
+        });
+      } catch {
+        // Thumbnail generation failed silently
+      }
+    };
+    // Generate immediately and then every 3 seconds
+    generateThumbnail();
+    const interval = setInterval(generateThumbnail, 3000);
+    return () => clearInterval(interval);
+  }, [activePageId]);
 
   // Fetch workspace info
   const fetchWorkspace = useCallback(async () => {
@@ -306,6 +333,9 @@ export default function WorkspaceContent({
           onDeletePage={handleDeletePage}
           onReorder={handleReorder}
           isTeacher={isTeacher}
+          thumbnails={thumbnails}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
         />
 
         {/* Canvas area */}
