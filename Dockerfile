@@ -4,8 +4,8 @@ WORKDIR /app
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npm ci --omit=dev
 
 # ── Stage 2: Build the application ────────────────────────────────
@@ -14,6 +14,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 
 RUN npm ci
 
@@ -53,6 +54,7 @@ COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/src/server ./src/server
 COPY --from=builder /app/src/lib ./src/lib
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/tsconfig.json ./
 
