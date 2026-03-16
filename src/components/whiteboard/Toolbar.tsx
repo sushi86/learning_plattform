@@ -16,12 +16,47 @@ interface ToolbarProps {
   children?: React.ReactNode;
 }
 
-const TOOL_ITEMS: { tool: ToolType; label: string; icon: string }[] = [
-  { tool: "select", label: "Auswählen", icon: "↖" },
-  { tool: "draw", label: "Stift", icon: "✏" },
-  { tool: "eraser", label: "Radierer", icon: "⌫" },
-  { tool: "text", label: "Text", icon: "T" },
-  { tool: "line", label: "Linie", icon: "╱" },
+/* SVG icon components for toolbar */
+const PencilIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+  </svg>
+);
+
+const CursorIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 3l14 8-7 2-3 7z" />
+  </svg>
+);
+
+const EraserIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+    <path d="M22 21H7" />
+    <path d="m5 11 9 9" />
+  </svg>
+);
+
+const TextIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="4 7 4 4 20 4 20 7" />
+    <line x1="9" y1="20" x2="15" y2="20" />
+    <line x1="12" y1="4" x2="12" y2="20" />
+  </svg>
+);
+
+const LineIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="5" y1="19" x2="19" y2="5" />
+  </svg>
+);
+
+const TOOL_ITEMS: { tool: ToolType; label: string; icon: React.ComponentType }[] = [
+  { tool: "draw", label: "Stift", icon: PencilIcon },
+  { tool: "select", label: "Auswählen", icon: CursorIcon },
+  { tool: "eraser", label: "Radierer", icon: EraserIcon },
+  { tool: "text", label: "Text", icon: TextIcon },
+  { tool: "line", label: "Linie", icon: LineIcon },
 ];
 
 export function Toolbar({
@@ -60,18 +95,18 @@ export function Toolbar({
       <div className="w-px h-6 bg-gray-200 mx-1" />
 
       {/* Tools */}
-      {TOOL_ITEMS.map(({ tool, label, icon }) => (
+      {TOOL_ITEMS.map(({ tool, label, icon: Icon }) => (
         <button
           key={tool}
           onClick={() => onToolChange(tool)}
-          className={`flex items-center justify-center w-9 h-9 rounded-lg text-sm transition-colors ${
+          className={`flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${
             activeTool === tool
               ? "bg-blue-100 text-blue-700"
               : "hover:bg-gray-100 text-gray-700"
           }`}
           title={label}
         >
-          {icon}
+          <Icon />
         </button>
       ))}
 
