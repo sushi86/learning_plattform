@@ -50,6 +50,7 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role: string }).role;
+        token.aiEnabled = (user as { aiEnabled: boolean }).aiEnabled;
       }
       return token;
     },
@@ -57,6 +58,7 @@ export const authConfig: NextAuthConfig = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.aiEnabled = token.aiEnabled as boolean;
       }
       return session;
     },
