@@ -138,6 +138,8 @@ export interface WhiteboardCanvasProps {
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   className?: string;
   aiEnabled?: boolean;
+  /** When true, the toolbar is rendered with fixed positioning so it stays visible */
+  isActive?: boolean;
 }
 
 /* --- Main component --- */
@@ -149,6 +151,7 @@ export function WhiteboardCanvas({
   onConnectionStatusChange,
   className,
   aiEnabled = false,
+  isActive = true,
 }: WhiteboardCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
@@ -1079,21 +1082,23 @@ export function WhiteboardCanvas({
         </div>
       )}
 
-      {/* Toolbar */}
-      <Toolbar
-        activeTool={activeTool}
-        onToolChange={setActiveTool}
-        activeColor={activeColor}
-        onColorChange={setActiveColor}
-        activeStrokeWidth={activeStrokeWidth}
-        onStrokeWidthChange={setActiveStrokeWidth}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      >
-        {pageId && <FileUploadButton pageId={pageId} onAddImage={addShape} />}
-      </Toolbar>
+      {/* Toolbar — only rendered for the active page so it stays fixed on screen */}
+      {isActive && (
+        <Toolbar
+          activeTool={activeTool}
+          onToolChange={setActiveTool}
+          activeColor={activeColor}
+          onColorChange={setActiveColor}
+          activeStrokeWidth={activeStrokeWidth}
+          onStrokeWidthChange={setActiveStrokeWidth}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        >
+          {pageId && <FileUploadButton pageId={pageId} onAddImage={addShape} />}
+        </Toolbar>
+      )}
     </div>
   );
 }

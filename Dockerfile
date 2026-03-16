@@ -61,7 +61,6 @@ COPY --from=builder /app/tsconfig.json ./
 # tsx + its dependencies needed to run TypeScript server at runtime
 COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
 COPY --from=builder /app/node_modules/esbuild ./node_modules/esbuild
-COPY --from=builder /app/node_modules/.bin/tsx ./node_modules/.bin/tsx
 
 # Uploads volume
 RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads
@@ -71,4 +70,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["node_modules/.bin/tsx", "server.ts"]
+CMD ["node", "--import", "tsx", "server.ts"]
