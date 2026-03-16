@@ -1,4 +1,4 @@
-export { BlankBackground } from "./BlankBackground";
-export { GridBackground } from "./GridBackground";
-export { LinedBackground } from "./LinedBackground";
-export { CoordinateBackground } from "./CoordinateBackground";
+export { KonvaBlank } from "./KonvaBlank";
+export { KonvaGrid } from "./KonvaGrid";
+export { KonvaLined } from "./KonvaLined";
+export { KonvaCoordinate } from "./KonvaCoordinate";
