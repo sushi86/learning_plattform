@@ -1,11 +1,105 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+enum BackgroundType {
+  BLANK
+  GRID
+  LINED
+  COORDINATE
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedWorkspaces      Workspace[]
+  workspaceMemberships WorkspaceMember[]
+  createdInviteLinks   InviteLink[]  @relation("CreatedInviteLinks")
+  usedInviteLinks      InviteLink[]  @relation("UsedInviteLinks")
+  fileUploads          FileUpload[]
+}
+
+model Workspace {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  ownerId     String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User              @relation(fields: [ownerId], references: [id])
+  pages       Page[]
+  members     WorkspaceMember[]
+  inviteLinks InviteLink[]
+}
+
+model WorkspaceMember {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  userId      String   @db.Uuid
+  joinedAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+}
+
+model InviteLink {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  token       String    @unique
+  createdById String    @db.Uuid
+  expiresAt   DateTime?
+  usedById    String?   @db.Uuid
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("CreatedInviteLinks", fields: [createdById], references: [id])
+  usedBy    User?     @relation("UsedInviteLinks", fields: [usedById], references: [id])
+}
+
+model Page {
+  id             String         @id @default(uuid()) @db.Uuid
+  workspaceId    String         @db.Uuid
+  title          String?
+  sortOrder      Int
+  backgroundType BackgroundType @default(BLANK)
+  canvasState    Json?
+  yDocState      Bytes?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  fileUploads FileUpload[]
+}
+
+model FileUpload {
+  id           String   @id @default(uuid()) @db.Uuid
+  pageId       String   @db.Uuid
+  uploadedById String   @db.Uuid
+  filename     String
+  mimeType     String
+  storagePath  String
+  fileSize     Int
+  createdAt    DateTime @default(now())
+
+  page       Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
 }
