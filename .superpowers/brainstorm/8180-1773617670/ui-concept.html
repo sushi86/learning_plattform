@@ -1,0 +1,143 @@
+<h2>UI-Konzept: MathBoard</h2>
+<p class="subtitle">Zwei Hauptansichten: Dashboard und Whiteboard</p>
+
+<h3 style="margin-top: 30px;">1. Dashboard (nach Login)</h3>
+<div class="mockup">
+  <div class="mockup-header">Dashboard — Lehrer-Ansicht</div>
+  <div class="mockup-body" style="padding: 0; background: #f5f5f5;">
+
+    <!-- Header -->
+    <div style="background: #1a1a2e; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="color: white; font-size: 16px; font-weight: 600;">MathBoard</div>
+      <div style="display: flex; gap: 15px; align-items: center;">
+        <span style="color: #888; font-size: 13px;">Sascha (Lehrer)</span>
+        <div style="width: 32px; height: 32px; background: #4a9eff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;">S</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 25px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #333;">Meine Workspaces</h3>
+        <button class="mock-button" style="background: #4a9eff; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px;">+ Neuer Workspace</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+        <!-- Workspace Card 1 -->
+        <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center;">
+            <span style="color: white; font-size: 28px;">📐</span>
+          </div>
+          <div style="padding: 12px;">
+            <div style="font-weight: 600; color: #333; font-size: 14px;">Trigonometrie</div>
+            <div style="color: #888; font-size: 12px; margin-top: 4px;">Max • 5 Seiten</div>
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+              <span style="background: #e8f5e9; color: #2e7d32; font-size: 10px; padding: 2px 8px; border-radius: 10px;">Aktiv</span>
+              <span style="background: #e3f2fd; color: #1565c0; font-size: 10px; padding: 2px 8px; border-radius: 10px;">3 neue Einträge</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workspace Card 2 -->
+        <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="height: 80px; background: linear-gradient(135deg, #f093fb, #f5576c); display: flex; align-items: center; justify-content: center;">
+            <span style="color: white; font-size: 28px;">📊</span>
+          </div>
+          <div style="padding: 12px;">
+            <div style="font-weight: 600; color: #333; font-size: 14px;">Analysis</div>
+            <div style="color: #888; font-size: 12px; margin-top: 4px;">Lisa • 8 Seiten</div>
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+              <span style="background: #e8f5e9; color: #2e7d32; font-size: 10px; padding: 2px 8px; border-radius: 10px;">Aktiv</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- New Workspace Card -->
+        <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; min-height: 140px; cursor: pointer;">
+          <div style="text-align: center; color: #aaa;">
+            <div style="font-size: 28px;">+</div>
+            <div style="font-size: 13px; margin-top: 4px;">Workspace erstellen</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top: 40px;">2. Whiteboard (in einem Workspace)</h3>
+<div class="mockup">
+  <div class="mockup-header">Whiteboard — "Trigonometrie" Workspace</div>
+  <div class="mockup-body" style="padding: 0; background: #f8f8f8;">
+
+    <!-- Top Bar -->
+    <div style="background: #1a1a2e; padding: 8px 15px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="color: #888; cursor: pointer;">← Dashboard</span>
+        <span style="color: white; font-size: 14px; font-weight: 500;">Trigonometrie</span>
+        <span style="color: #4a9eff; font-size: 12px;">• Max ist online</span>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px;">PDF Export</button>
+        <button style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px;">Einstellungen</button>
+      </div>
+    </div>
+
+    <div style="display: flex; height: 350px;">
+      <!-- Page Sidebar -->
+      <div style="width: 100px; background: #f0f0f0; border-right: 1px solid #ddd; padding: 10px 8px; overflow-y: auto;">
+        <div style="font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">Seiten</div>
+
+        <div style="background: white; border: 2px solid #4a9eff; border-radius: 4px; padding: 4px; margin-bottom: 8px; cursor: pointer;">
+          <div style="background: repeating-linear-gradient(#fff, #fff 9px, #e8e8e8 9px, #e8e8e8 10px); height: 50px; border-radius: 2px;"></div>
+          <div style="font-size: 9px; color: #333; text-align: center; margin-top: 3px;">1: Sinussatz</div>
+        </div>
+
+        <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px; margin-bottom: 8px; cursor: pointer;">
+          <div style="background: repeating-linear-gradient(#fff, #fff 9px, #e8e8e8 9px, #e8e8e8 10px); height: 50px; border-radius: 2px;"></div>
+          <div style="font-size: 9px; color: #333; text-align: center; margin-top: 3px;">2: Kosinussatz</div>
+        </div>
+
+        <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px; margin-bottom: 8px; cursor: pointer;">
+          <div style="background: #fff; height: 50px; border-radius: 2px; position: relative;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 1px; background: #ccc;"></div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 1px; height: 40px; background: #ccc;"></div>
+          </div>
+          <div style="font-size: 9px; color: #333; text-align: center; margin-top: 3px;">3: Übungen</div>
+        </div>
+
+        <div style="border: 1px dashed #ccc; border-radius: 4px; padding: 10px; text-align: center; cursor: pointer; color: #aaa; font-size: 18px;">
+          +
+        </div>
+      </div>
+
+      <!-- Canvas Area -->
+      <div style="flex: 1; position: relative;">
+        <!-- Grid Background -->
+        <div style="position: absolute; inset: 0; background: repeating-linear-gradient(#fff, #fff 19px, #e8e8e8 19px, #e8e8e8 20px), repeating-linear-gradient(90deg, #fff, #fff 19px, #e8e8e8 19px, #e8e8e8 20px);"></div>
+
+        <!-- Simulated Content -->
+        <div style="position: absolute; top: 20px; left: 20px; color: #333; font-family: 'Caveat', cursive, sans-serif; font-size: 18px;">
+          Sinussatz: a/sin(α) = b/sin(β) = c/sin(γ)
+        </div>
+        <div style="position: absolute; top: 60px; left: 20px; color: #e74c3c; font-family: 'Caveat', cursive, sans-serif; font-size: 14px;">
+          ← Korrektur: Achte auf die Klammern!
+        </div>
+
+        <!-- Toolbar (floating) -->
+        <div style="position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: #1a1a2e; padding: 8px 12px; border-radius: 10px; display: flex; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+          <div style="width: 32px; height: 32px; background: #4a9eff; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;" title="Stift">✏️</div>
+          <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;" title="Radierer">🧹</div>
+          <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;" title="Text">T</div>
+          <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;" title="Formen">▢</div>
+          <div style="width: 1px; background: rgba(255,255,255,0.2); margin: 0 4px;"></div>
+          <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px;" title="Farbe">
+            <div style="width: 16px; height: 16px; background: #333; border-radius: 50%; border: 2px solid white;"></div>
+          </div>
+          <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;" title="Upload">📎</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">

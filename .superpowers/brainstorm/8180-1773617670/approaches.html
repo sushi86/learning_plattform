@@ -1,0 +1,69 @@
+<h2>Architekturansätze für das Whiteboard</h2>
+<p class="subtitle">Drei Wege zum Ziel — jeder mit unterschiedlichen Trade-offs</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>tldraw-basiert (Empfohlen)</h3>
+      <p><strong>Canvas-Engine:</strong> <a href="https://tldraw.dev" target="_blank">tldraw</a> — Open-Source Whiteboard-Engine (React/TypeScript). Bringt Stift, Formen, Text, Radierer, Zoom, Undo/Redo out-of-the-box mit.</p>
+      <p><strong>Realtime-Sync:</strong> tldraw hat ein eingebautes Sync-Protokoll basierend auf Y.js (CRDT). Konfliktfreie Synchronisation auch bei gleichzeitigem Zeichnen.</p>
+      <p><strong>Persistenz:</strong> Zustand wird als JSON-Dokument gespeichert → PostgreSQL.</p>
+      <p><strong>Vorteile:</strong> Extrem viel out-of-the-box, aktive Community, Apple Pencil Support, erweiterbar.</p>
+      <p><strong>Nachteile:</strong> Große Dependency (~500KB), eigene Opinions über UX die evtl. angepasst werden müssen.</p>
+      <p><strong>Aufwand MVP:</strong> ★★☆☆☆ (mittel-niedrig)</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Excalidraw-basiert</h3>
+      <p><strong>Canvas-Engine:</strong> <a href="https://excalidraw.com" target="_blank">Excalidraw</a> — ebenfalls Open-Source, bekannt für den "Handgezeichnet"-Stil. React-basiert.</p>
+      <p><strong>Realtime-Sync:</strong> Eingebaute Collaboration via WebSocket. End-to-End encrypted möglich.</p>
+      <p><strong>Persistenz:</strong> JSON-basierter Zustand, gut speicherbar.</p>
+      <p><strong>Vorteile:</strong> Passt perfekt zum Handschrift-Stil den du gewählt hast! Intuitiv, beliebt, gute Touch-Unterstützung.</p>
+      <p><strong>Nachteile:</strong> Weniger flexibel bei Custom-Hintergründen (kariert, Koordinatensystem). Stiftdruck-Support eingeschränkt.</p>
+      <p><strong>Aufwand MVP:</strong> ★★☆☆☆ (mittel-niedrig)</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Custom Canvas + perfect-freehand</h3>
+      <p><strong>Canvas-Engine:</strong> Eigene Lösung mit HTML Canvas API + <a href="https://github.com/steveruizok/perfect-freehand" target="_blank">perfect-freehand</a> Library für natürliche Striche.</p>
+      <p><strong>Realtime-Sync:</strong> Eigene WebSocket-Implementierung mit Y.js für CRDT-basierte Synchronisation.</p>
+      <p><strong>Persistenz:</strong> Eigenes Datenmodell in PostgreSQL.</p>
+      <p><strong>Vorteile:</strong> Volle Kontrolle über jeden Aspekt. Perfekt anpassbar an Schulkontext (Hintergründe, Werkzeuge).</p>
+      <p><strong>Nachteile:</strong> Deutlich mehr Entwicklungsaufwand. Alles selbst bauen: Undo/Redo, Formen, Selection, Touch-Handling.</p>
+      <p><strong>Aufwand MVP:</strong> ★★★★☆ (hoch)</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 30px;">
+  <h3>Meine Empfehlung: Option A (tldraw)</h3>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Warum tldraw?</h4>
+      <ul>
+        <li>Beste Balance aus Features und Anpassbarkeit</li>
+        <li>Seitenbasiertes Layout umsetzbar</li>
+        <li>Custom Hintergründe (kariert, Koordinatensystem) über Background-Layer</li>
+        <li>Eingebautes Sync-Protokoll</li>
+        <li>PDF-Export über SVG → PDF Konvertierung möglich</li>
+        <li>Aktiv maintained, gute TypeScript-Typen</li>
+        <li>Apple Pencil Druckempfindlichkeit wird unterstützt</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Bedenken</h4>
+      <ul>
+        <li>Bundle-Größe (aber akzeptabel für eine App)</li>
+        <li>Lernkurve für tldraw's interne APIs</li>
+        <li>Einige Custom-Features erfordern tiefes Verständnis der Engine</li>
+      </ul>
+    </div>
+  </div>
+</div>

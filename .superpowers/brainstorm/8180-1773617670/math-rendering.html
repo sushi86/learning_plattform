@@ -1,0 +1,87 @@
+<h2>Mathematische Darstellung: Welcher Stil passt besser?</h2>
+<p class="subtitle">Beide Optionen zeigen die gleiche Aufgabe: Ableitung von f(x) = 3x&sup2; + 2x - 5</p>
+
+<div class="cards">
+  <div class="card" data-choice="latex" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #1a1a2e; padding: 30px; font-family: serif;">
+      <div style="color: #e0e0e0; font-size: 14px; margin-bottom: 15px; font-family: sans-serif; opacity: 0.7;">SCHRITT-FÜR-SCHRITT LÖSUNG</div>
+
+      <div style="color: #fff; margin-bottom: 20px;">
+        <div style="font-size: 13px; color: #888; margin-bottom: 5px;">Aufgabe:</div>
+        <div style="font-size: 20px; font-family: 'Times New Roman', serif; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+          f(x) = 3x&sup2; + 2x &minus; 5
+        </div>
+      </div>
+
+      <div style="border-left: 3px solid #4a9eff; padding-left: 15px; margin-bottom: 15px;">
+        <div style="color: #4a9eff; font-size: 12px; font-family: sans-serif; margin-bottom: 4px;">Schritt 1: Potenzregel anwenden</div>
+        <div style="color: #fff; font-size: 18px; font-family: 'Times New Roman', serif;">
+          f'(x) = 3 &middot; 2x<sup>2-1</sup> + 2 &middot; 1x<sup>1-1</sup> &minus; 0
+        </div>
+      </div>
+
+      <div style="border-left: 3px solid #4a9eff; padding-left: 15px; margin-bottom: 15px;">
+        <div style="color: #4a9eff; font-size: 12px; font-family: sans-serif; margin-bottom: 4px;">Schritt 2: Vereinfachen</div>
+        <div style="color: #fff; font-size: 18px; font-family: 'Times New Roman', serif;">
+          f'(x) = 6x + 2
+        </div>
+      </div>
+
+      <div style="background: rgba(74, 158, 255, 0.1); padding: 12px; border-radius: 6px; margin-top: 10px;">
+        <div style="color: #4a9eff; font-size: 12px; font-family: sans-serif; margin-bottom: 4px;">Ergebnis</div>
+        <div style="color: #fff; font-size: 22px; font-family: 'Times New Roman', serif; font-weight: bold;">
+          f'(x) = 6x + 2
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Professionelles LaTeX-Rendering</h3>
+      <p>Sieht aus wie in Schulbüchern und Klausuren. Klar, präzise, professionell. Nutzt KaTeX — schnell und bewährt.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="handwritten" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #faf8f5; padding: 30px;">
+      <div style="color: #666; font-size: 14px; margin-bottom: 15px; font-family: sans-serif; opacity: 0.7;">SCHRITT-FÜR-SCHRITT LÖSUNG</div>
+
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 13px; color: #999; margin-bottom: 5px; font-family: sans-serif;">Aufgabe:</div>
+        <div style="font-size: 22px; font-family: 'Caveat', cursive, 'Comic Sans MS'; color: #333; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 6px;">
+          f(x) = 3x&sup2; + 2x - 5
+        </div>
+      </div>
+
+      <div style="border-left: 3px solid #e67e22; padding-left: 15px; margin-bottom: 15px;">
+        <div style="color: #e67e22; font-size: 12px; font-family: sans-serif; margin-bottom: 4px;">Schritt 1: Potenzregel anwenden</div>
+        <div style="font-size: 20px; font-family: 'Caveat', cursive, 'Comic Sans MS'; color: #333;">
+          f'(x) = 3 &middot; 2x<sup>2-1</sup> + 2 &middot; 1x<sup>1-1</sup> - 0
+        </div>
+      </div>
+
+      <div style="border-left: 3px solid #e67e22; padding-left: 15px; margin-bottom: 15px;">
+        <div style="color: #e67e22; font-size: 12px; font-family: sans-serif; margin-bottom: 4px;">Schritt 2: Vereinfachen</div>
+        <div style="font-size: 20px; font-family: 'Caveat', cursive, 'Comic Sans MS'; color: #333;">
+          f'(x) = 6x + 2
+        </div>
+      </div>
+
+      <div style="background: rgba(230, 126, 34, 0.1); padding: 12px; border-radius: 6px; margin-top: 10px;">
+        <div style="color: #e67e22; font-size: 12px; font-family: sans-serif; margin-bottom: 4px;">Ergebnis</div>
+        <div style="font-size: 24px; font-family: 'Caveat', cursive, 'Comic Sans MS'; color: #333; font-weight: bold;">
+          f'(x) = 6x + 2
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Handschrift-Stil</h3>
+      <p>Fühlt sich natürlicher und weniger einschüchternd an. Wie eine Erklärung vom Nachhilfelehrer auf Papier.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>Empfehlung</h3>
+  <p>Für 10. Klasse Real und Oberstufe empfehle ich <strong>Option A (LaTeX)</strong>: Die Schüler müssen diese Notation in Klausuren lesen und schreiben. LaTeX ist der Standard in Schulbüchern und bereitet besser aufs Abitur vor. Außerdem ist KaTeX technisch ausgereifter und kann komplexe Formeln (Integrale, Matrizen, Brüche) sauber darstellen.</p>
+</div>
+
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">

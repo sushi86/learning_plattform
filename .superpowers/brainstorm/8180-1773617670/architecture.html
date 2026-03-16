@@ -1,0 +1,98 @@
+<h2>Systemarchitektur: MathBoard</h2>
+<p class="subtitle">Gesamtbild der Plattform — Phase 1: Whiteboard, Phase 2: KI-Tutor</p>
+
+<div class="mockup">
+  <div class="mockup-header">Architektur-Übersicht</div>
+  <div class="mockup-body" style="padding: 30px; font-family: 'Segoe UI', system-ui, sans-serif;">
+
+    <!-- Client Layer -->
+    <div style="background: #1a1a2e; border: 2px solid #4a9eff; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+      <div style="color: #4a9eff; font-size: 13px; font-weight: 600; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Client (Next.js Frontend)</div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div style="background: rgba(74,158,255,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(74,158,255,0.3);">
+          <strong>tldraw Canvas</strong><br><span style="color: #888; font-size: 11px;">Zeichnen, Formen, Text</span>
+        </div>
+        <div style="background: rgba(74,158,255,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(74,158,255,0.3);">
+          <strong>Seitenverwaltung</strong><br><span style="color: #888; font-size: 11px;">Seiten, Hintergründe, Navigation</span>
+        </div>
+        <div style="background: rgba(74,158,255,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(74,158,255,0.3);">
+          <strong>Werkzeugleiste</strong><br><span style="color: #888; font-size: 11px;">Stift, Radierer, Farben, Formen</span>
+        </div>
+        <div style="background: rgba(74,158,255,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(74,158,255,0.3);">
+          <strong>Auth UI</strong><br><span style="color: #888; font-size: 11px;">Login, Register</span>
+        </div>
+        <div style="background: rgba(230,126,34,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px dashed rgba(230,126,34,0.5);">
+          <strong>KI-Tutor UI</strong><br><span style="color: #e67e22; font-size: 11px;">Phase 2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div style="text-align: center; color: #666; font-size: 20px; margin: 5px 0;">↕ WebSocket (tldraw sync) + REST API</div>
+
+    <!-- Server Layer -->
+    <div style="background: #1a1a2e; border: 2px solid #27ae60; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+      <div style="color: #27ae60; font-size: 13px; font-weight: 600; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Server (Next.js API Routes + WebSocket)</div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div style="background: rgba(39,174,96,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(39,174,96,0.3);">
+          <strong>Auth Service</strong><br><span style="color: #888; font-size: 11px;">NextAuth.js / Auth.js</span>
+        </div>
+        <div style="background: rgba(39,174,96,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(39,174,96,0.3);">
+          <strong>Whiteboard Service</strong><br><span style="color: #888; font-size: 11px;">CRUD, Zuweisungen, Rechte</span>
+        </div>
+        <div style="background: rgba(39,174,96,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(39,174,96,0.3);">
+          <strong>Sync Server</strong><br><span style="color: #888; font-size: 11px;">tldraw Y.js Sync, WebSocket</span>
+        </div>
+        <div style="background: rgba(39,174,96,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(39,174,96,0.3);">
+          <strong>File Upload</strong><br><span style="color: #888; font-size: 11px;">PDF/Bilder → S3/lokaler Speicher</span>
+        </div>
+        <div style="background: rgba(39,174,96,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(39,174,96,0.3);">
+          <strong>PDF Export</strong><br><span style="color: #888; font-size: 11px;">Canvas → SVG → PDF</span>
+        </div>
+        <div style="background: rgba(230,126,34,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px dashed rgba(230,126,34,0.5);">
+          <strong>KI Service</strong><br><span style="color: #e67e22; font-size: 11px;">Phase 2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div style="text-align: center; color: #666; font-size: 20px; margin: 5px 0;">↕ Prisma ORM</div>
+
+    <!-- Data Layer -->
+    <div style="background: #1a1a2e; border: 2px solid #9b59b6; border-radius: 12px; padding: 20px;">
+      <div style="color: #9b59b6; font-size: 13px; font-weight: 600; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Daten (PostgreSQL + Dateispeicher)</div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div style="background: rgba(155,89,182,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(155,89,182,0.3);">
+          <strong>Users</strong><br><span style="color: #888; font-size: 11px;">Konten, Rollen (Lehrer/Schüler)</span>
+        </div>
+        <div style="background: rgba(155,89,182,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(155,89,182,0.3);">
+          <strong>Workspaces</strong><br><span style="color: #888; font-size: 11px;">Whiteboard-Räume</span>
+        </div>
+        <div style="background: rgba(155,89,182,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(155,89,182,0.3);">
+          <strong>Pages</strong><br><span style="color: #888; font-size: 11px;">Seiten pro Workspace</span>
+        </div>
+        <div style="background: rgba(155,89,182,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(155,89,182,0.3);">
+          <strong>Canvas State</strong><br><span style="color: #888; font-size: 11px;">tldraw JSON Snapshots</span>
+        </div>
+        <div style="background: rgba(155,89,182,0.15); padding: 10px 16px; border-radius: 8px; color: #e0e0e0; font-size: 13px; border: 1px solid rgba(155,89,182,0.3);">
+          <strong>Files</strong><br><span style="color: #888; font-size: 11px;">Uploads (PDF, Bilder)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>Kernkonzepte</h3>
+  <div style="display: grid; gap: 15px;">
+    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 3px solid #4a9eff;">
+      <strong>Workspace</strong> = Ein Whiteboard-Raum (z.B. "Mathe Sohn", "Physik Tochter"). Wird vom Lehrer erstellt und Schülern zugewiesen.
+    </div>
+    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 3px solid #27ae60;">
+      <strong>Page</strong> = Eine einzelne Seite im Workspace. Hat einen Hintergrund-Typ (leer, kariert, liniert, Koordinatensystem). Kann hinzugefügt werden.
+    </div>
+    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 3px solid #9b59b6;">
+      <strong>Rollen</strong> = Lehrer (du) kann alles: erstellen, zuweisen, korrigieren, löschen. Schüler können zeichnen, Seiten hinzufügen, aber keine Workspaces erstellen.
+    </div>
+  </div>
+</div>
