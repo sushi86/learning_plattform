@@ -56,14 +56,10 @@ export async function POST(
     },
   });
 
-  const baseUrl = request.nextUrl.origin;
-  const inviteUrl = `${baseUrl}/invite/${token}`;
-
   return NextResponse.json(
     {
       id: inviteLink.id,
       token: inviteLink.token,
-      url: inviteUrl,
       expiresAt: inviteLink.expiresAt,
     },
     { status: 201 },

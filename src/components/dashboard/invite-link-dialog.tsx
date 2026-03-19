@@ -69,7 +69,7 @@ export default function InviteLinkDialog({
         return;
       }
 
-      setNewUrl(data.url);
+      setNewUrl(getInviteUrl(data.token));
       // Refresh the list
       fetchInviteLinks();
     } catch {
